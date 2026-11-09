@@ -1,6 +1,6 @@
 //! Todos los números ajustables del juego viven aquí.
 
-use crate::engine::math::{Vec3, Vec4};
+use crate::engine::math::Vec4;
 
 pub const WIDTH: usize = 900;
 pub const HEIGHT: usize = 620;
@@ -39,11 +39,30 @@ pub const SHIP_MAX_SPEED: f32 = 22.0;
 /// Si es `true`, invierte el cabeceo (por defecto, sin invertir: ↑ = nariz abajo).
 pub const INVERT_PITCH: bool = false;
 
-// --- Límite de velocidad por cercanía (punto de referencia temporal; en Fase 3 será el planeta más cercano) ---
-pub const NAV_TARGET_POINT: Vec3 = Vec3::new(0.0, 0.0, 0.0);
-/// Debajo de esta distancia la velocidad máxima se reduce linealmente hasta `NAV_MIN_SPEED_NEAR`.
-pub const NAV_SLOWDOWN_RADIUS: f32 = 14.0;
+// --- Límite de velocidad por cercanía al cuerpo celeste más próximo ---
+/// Debajo de `radio_del_cuerpo + este margen` la velocidad máxima se reduce
+/// linealmente hasta `NAV_MIN_SPEED_NEAR`.
+pub const NAV_SLOWDOWN_MARGIN: f32 = 10.0;
 pub const NAV_MIN_SPEED_NEAR: f32 = 5.0;
+
+// --- Sistema solar: gravedad y colisión (Fase 3) ---
+/// Constante de gravedad propia (no física real, ajustada a la escala del juego).
+pub const GRAVITY_CONST: f32 = 0.75;
+/// Piso de distancia al cuadrado: evita que la gravedad se dispare muy cerca de la superficie.
+pub const GRAVITY_MIN_DIST_SQ: f32 = 9.0;
+/// Magnitud máxima de aceleración gravitacional de un solo cuerpo.
+pub const GRAVITY_MAX_ACCEL: f32 = 3.0;
+/// Margen sobre el radio del cuerpo para la colisión esférica de la nave.
+pub const SHIP_COLLISION_MARGIN: f32 = 0.85;
+
+// --- Modo órbita asistida (`O`) ---
+pub const ORBIT_ASSIST_RESPONSE: f32 = 0.85;
+pub const ORBIT_ASSIST_MIN_SPEED: f32 = 4.0;
+pub const ORBIT_ASSIST_MAX_SPEED: f32 = 9.0;
+pub const ORBIT_ASSIST_SPEED_PER_DISTANCE: f32 = 0.12;
+pub const ORBIT_ASSIST_PREFERRED_MARGIN: f32 = 4.5;
+pub const ORBIT_ASSIST_CORRECTION_GAIN: f32 = 0.9;
+pub const ORBIT_ASSIST_MAX_CORRECTION: f32 = 2.0;
 
 // --- Cámara perseguidora ---
 pub const CAMERA_BACK_DISTANCE: f32 = 8.2;

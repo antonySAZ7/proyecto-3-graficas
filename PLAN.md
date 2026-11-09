@@ -30,10 +30,10 @@ Referencia JS: `reference/js/{math,obj,meshes,renderer,shaders,game}.js`. Úsalo
 **Listo cuando:** se vuela cómodo en el vacío, sin marearse.
 
 ## Fase 3: Sistema solar
-- [ ] `bodies.rs` como datos: radio, órbita, velocidad, inclinación, rotación, shader, luna opcional.
-- [ ] Sol + 5 planetas (Tierra, Mundo Forja, Niflheim, Planeta Fragmentado, Mundo de Plata) + Luna, órbitas y rotación por tiempo.
-- [ ] Gravedad por inversa del cuadrado, colisión esférica, modo `O` para rodear un planeta.
-- [ ] Acercamiento continuo sin cortes.
+- [x] `bodies.rs` como datos: radio, órbita, velocidad, inclinación, rotación, shader, luna opcional.
+- [x] Sol + 5 planetas (Tierra, Mundo Forja, Niflheim, Planeta Fragmentado, Mundo de Plata) + Luna, órbitas y rotación por tiempo.
+- [x] Gravedad por inversa del cuadrado, colisión esférica, modo `O` para rodear un planeta.
+- [x] Acercamiento continuo sin cortes.
 
 **Listo cuando:** se puede ir de lejos a la superficie y rodear un planeta sin saltos ni atravesarlo.
 
