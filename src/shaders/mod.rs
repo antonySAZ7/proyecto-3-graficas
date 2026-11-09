@@ -23,7 +23,9 @@ pub struct Uniforms {
     pub light_dir: Vec3,
 }
 
-pub trait FragmentShader {
+/// `Sync`: varias bandas del rasterizador llaman a `shade` en paralelo desde
+/// distintos hilos (ver `engine::rasterizer::RenderQueue`).
+pub trait FragmentShader: Sync {
     /// Color RGB lineal más alfa (alfa < 1 mezcla con lo ya dibujado, usado por los anillos).
     fn shade(&self, input: &FragInput, uniforms: &Uniforms) -> Vec4;
 }

@@ -40,6 +40,47 @@ pub fn draw_controls_manual(fb: &mut Framebuffer) {
     }
 }
 
+/// Contadores de rendimiento de un frame, para el panel de la Fase 4.
+pub struct PerfStats {
+    pub fps: f32,
+    pub triangles_drawn: u32,
+    pub triangles_culled: u32,
+    pub objects_visible: u32,
+    pub objects_culled: u32,
+    pub frustum_culling_enabled: bool,
+    pub max_lod_forced: bool,
+}
+
+/// Panel anclado a la esquina superior izquierda con FPS, triángulos
+/// procesados/descartados y objetos descartados por frustum culling; `F2`/`F3`
+/// cambian los dos últimos campos para poder comparar en vivo.
+pub fn draw_performance_panel(fb: &mut Framebuffer, stats: &PerfStats) {
+    let lines = [
+        format!("FPS {:.0}", stats.fps),
+        format!("TRIANGULOS {} / {}", stats.triangles_drawn, stats.triangles_drawn + stats.triangles_culled),
+        format!("OBJETOS VISIBLES {} / {}", stats.objects_visible, stats.objects_visible + stats.objects_culled),
+        format!("CULLING {}", if stats.frustum_culling_enabled { "ON" } else { "OFF" }),
+        format!("LOD MAX {}", if stats.max_lod_forced { "ON" } else { "off" }),
+    ];
+
+    let line_height = font::GLYPH_HEIGHT as i32 * config::PERF_TEXT_SCALE + config::PERF_LINE_SPACING;
+    let widest = lines.iter().map(|l| font::text_width(l, config::PERF_TEXT_SCALE)).max().unwrap_or(0);
+
+    let panel_w = widest + config::PERF_PADDING * 2;
+    let panel_h = line_height * lines.len() as i32 + config::PERF_PADDING * 2;
+    let panel_x = config::PERF_MARGIN;
+    let panel_y = config::PERF_MARGIN;
+
+    font::draw_panel(fb, panel_x, panel_y, panel_w, panel_h, config::PERF_PANEL_COLOR);
+
+    let text_x = panel_x + config::PERF_PADDING;
+    let mut text_y = panel_y + config::PERF_PADDING;
+    for line in &lines {
+        font::draw_text(fb, text_x, text_y, line, config::PERF_TEXT_SCALE, config::PERF_TEXT_COLOR);
+        text_y += line_height;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -48,5 +89,20 @@ mod tests {
     fn draw_controls_manual_does_not_panic_on_small_framebuffer() {
         let mut fb = Framebuffer::new(64, 64);
         draw_controls_manual(&mut fb);
+    }
+
+    #[test]
+    fn draw_performance_panel_does_not_panic_on_small_framebuffer() {
+        let mut fb = Framebuffer::new(64, 64);
+        let stats = PerfStats {
+            fps: 60.0,
+            triangles_drawn: 100,
+            triangles_culled: 20,
+            objects_visible: 3,
+            objects_culled: 2,
+            frustum_culling_enabled: true,
+            max_lod_forced: false,
+        };
+        draw_performance_panel(&mut fb, &stats);
     }
 }

@@ -38,10 +38,10 @@ Referencia JS: `reference/js/{math,obj,meshes,renderer,shaders,game}.js`. Úsalo
 **Listo cuando:** se puede ir de lejos a la superficie y rodear un planeta sin saltos ni atravesarlo.
 
 ## Fase 4: Rendimiento
-- [ ] Rasterización paralela por bandas con `rayon`; buffers reutilizados.
-- [ ] Frustum culling por esfera (`F2` compara encendido/apagado).
-- [ ] LOD de 3 niveles por distancia (`F3` compara con máximo detalle).
-- [ ] HUD con FPS, triángulos procesados y objetos descartados.
+- [x] Rasterización paralela por bandas con `rayon`; buffers reutilizados.
+- [x] Frustum culling por esfera (`F2` compara encendido/apagado).
+- [x] LOD de 3 niveles por distancia (`F3` compara con máximo detalle).
+- [x] HUD con FPS, triángulos procesados y objetos descartados.
 
 **Listo cuando:** 60 FPS estables a la resolución objetivo y los contadores cambian de verdad con `F2`/`F3`.
 

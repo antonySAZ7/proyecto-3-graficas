@@ -23,6 +23,9 @@ pub enum Action {
     Pause,
     ToggleManual,
     Quit,
+    /// Depuración de rendimiento (Fase 4): comparar con culling/LOD apagado.
+    ToggleFrustumCulling,
+    ToggleMaxLod,
     /// Reservadas para fases futuras: aparecen en el manual pero sin lógica todavía.
     OrbitAssist,
     Warp,
@@ -57,6 +60,8 @@ pub const BINDINGS: &[Binding] = &[
     Binding { action: Action::Reset, key: Key::R, label: "R", implemented: true },
     Binding { action: Action::Pause, key: Key::P, label: "P", implemented: true },
     Binding { action: Action::ToggleManual, key: Key::F1, label: "F1", implemented: true },
+    Binding { action: Action::ToggleFrustumCulling, key: Key::F2, label: "F2", implemented: true },
+    Binding { action: Action::ToggleMaxLod, key: Key::F3, label: "F3", implemented: true },
     Binding { action: Action::Quit, key: Key::Escape, label: "ESC", implemented: true },
 ];
 
@@ -80,6 +85,8 @@ pub const MANUAL: &[ManualLine] = &[
     ManualLine { label: "REINICIAR", actions: &[Action::Reset] },
     ManualLine { label: "PAUSA", actions: &[Action::Pause] },
     ManualLine { label: "MANUAL", actions: &[Action::ToggleManual] },
+    ManualLine { label: "CULLING", actions: &[Action::ToggleFrustumCulling] },
+    ManualLine { label: "LOD MAX", actions: &[Action::ToggleMaxLod] },
     ManualLine { label: "SALIR", actions: &[Action::Quit] },
 ];
 
@@ -123,6 +130,8 @@ pub struct InputState {
     pub toggle_stabilize: bool,
     pub toggle_orbit_assist: bool,
     pub toggle_manual: bool,
+    pub toggle_frustum_culling: bool,
+    pub toggle_max_lod: bool,
     pub pause: bool,
     pub reset: bool,
 }
@@ -146,6 +155,8 @@ pub fn read(window: &Window) -> InputState {
         toggle_stabilize: is_pressed(window, Action::StabilizeAssist),
         toggle_orbit_assist: is_pressed(window, Action::OrbitAssist),
         toggle_manual: is_pressed(window, Action::ToggleManual),
+        toggle_frustum_culling: is_pressed(window, Action::ToggleFrustumCulling),
+        toggle_max_lod: is_pressed(window, Action::ToggleMaxLod),
         pause: is_pressed(window, Action::Pause),
         reset: is_pressed(window, Action::Reset),
     }
@@ -164,7 +175,7 @@ mod tests {
         use Action::*;
         let all = [
             PitchUp, PitchDown, YawLeft, YawRight, RollLeft, RollRight, Accelerate, Brake, Boost, Cruise,
-            StabilizeAssist, Reset, Pause, ToggleManual, Quit, OrbitAssist, Warp, Fire,
+            StabilizeAssist, Reset, Pause, ToggleManual, Quit, ToggleFrustumCulling, ToggleMaxLod, OrbitAssist, Warp, Fire,
         ];
         for action in all {
             let count = BINDINGS.iter().filter(|b| b.action == action).count();

@@ -9,8 +9,17 @@ pub const FOV_DEGREES: f32 = 45.0;
 pub const NEAR_PLANE: f32 = 0.1;
 pub const FAR_PLANE: f32 = 100.0;
 
-pub const SPHERE_STACKS: u32 = 48;
-pub const SPHERE_SLICES: u32 = 64;
+// --- LOD de la esfera (sol/planetas/luna): 3 mallas precalculadas, elegidas
+// por distancia relativa al radio del cuerpo (ver engine::lod). ---
+pub const SPHERE_STACKS_HIGH: u32 = 48;
+pub const SPHERE_SLICES_HIGH: u32 = 64;
+pub const SPHERE_STACKS_MEDIUM: u32 = 20;
+pub const SPHERE_SLICES_MEDIUM: u32 = 28;
+pub const SPHERE_STACKS_LOW: u32 = 8;
+pub const SPHERE_SLICES_LOW: u32 = 12;
+/// Umbral `distancia / radio` por encima del cual se baja a detalle medio/bajo.
+pub const LOD_MEDIUM_RATIO: f32 = 9.0;
+pub const LOD_LOW_RATIO: f32 = 22.0;
 
 pub const RING_INNER_RADIUS: f32 = 1.7;
 pub const RING_OUTER_RADIUS: f32 = 2.7;
@@ -84,3 +93,16 @@ pub const MANUAL_MARGIN: i32 = 10;
 pub const MANUAL_PADDING: i32 = 8;
 pub const MANUAL_PANEL_COLOR: Vec4 = Vec4::new(0.03, 0.05, 0.09, 0.62);
 pub const MANUAL_TEXT_COLOR: Vec4 = Vec4::new(0.75, 0.95, 1.0, 1.0);
+
+// --- Rendimiento (Fase 4) ---
+/// Filas de framebuffer por banda de rasterización en paralelo (`rayon`).
+/// Menos filas = más bandas = más paralelismo, con algo más de overhead por banda.
+pub const RENDER_BAND_ROWS: usize = 48;
+
+// --- Panel de rendimiento (FPS, triángulos, descarte; `F2`/`F3` los comparan) ---
+pub const PERF_TEXT_SCALE: i32 = 2;
+pub const PERF_LINE_SPACING: i32 = 2;
+pub const PERF_MARGIN: i32 = 10;
+pub const PERF_PADDING: i32 = 8;
+pub const PERF_PANEL_COLOR: Vec4 = Vec4::new(0.03, 0.05, 0.09, 0.62);
+pub const PERF_TEXT_COLOR: Vec4 = Vec4::new(0.8, 1.0, 0.8, 1.0);
