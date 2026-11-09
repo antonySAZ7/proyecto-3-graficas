@@ -4,23 +4,25 @@ mod shaders;
 
 use std::time::Instant;
 
-use glam::{Mat4, Vec3};
 use minifb::{Key, KeyRepeat, Window, WindowOptions};
 
 use engine::framebuffer::Framebuffer;
+use engine::math::{Mat4, Quat, Vec3};
 use engine::mesh::{self, Mesh};
+use engine::obj;
 use engine::rasterizer;
 use game::config;
 use shaders::gas_giant::GasGiantShader;
 use shaders::moon::MoonShader;
 use shaders::rings::RingShader;
 use shaders::rocky::RockyShader;
+use shaders::ship::ShipShader;
 use shaders::star::StarShader;
 use shaders::{FragmentShader, Uniforms};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut window = Window::new(
-        "Cuerpos Celestes - Shaders (1: estrella, 2: rocoso, 3: gigante gaseoso)",
+        "Cuerpos Celestes - Shaders (1: estrella, 2: rocoso, 3: gigante gaseoso, 4: nave)",
         config::WIDTH,
         config::HEIGHT,
         WindowOptions::default(),
@@ -56,6 +58,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         config::RING_INNER_RADIUS,
         config::RING_OUTER_RADIUS,
     );
+    let ship_shader = ShipShader::new();
+    let ship_mesh: Mesh = obj::load_obj(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/models/fantasticar.obj"))
+        .expect("no se pudo cargar assets/models/fantasticar.obj");
 
     // Escena 1: solo la estrella.
     let star_model = Mat4::from_scale(Vec3::splat(1.6));
@@ -78,9 +83,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     let mut active: u8 = 1;
-    let start = Instant::now();
+    let mut ship_time = 0.0f32;
+    let mut last_frame = Instant::now();
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
+        // Delta time acotado: evita saltos de animación tras una pausa o un frame lento.
+        let now = Instant::now();
+        let dt = (now - last_frame).as_secs_f32().min(1.0 / 20.0);
+        last_frame = now;
+        ship_time += dt;
+
         if window.is_key_pressed(Key::Key1, KeyRepeat::No) {
             active = 1;
         }
@@ -90,14 +102,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if window.is_key_pressed(Key::Key3, KeyRepeat::No) {
             active = 3;
         }
+        if window.is_key_pressed(Key::Key4, KeyRepeat::No) {
+            active = 4;
+        }
 
-        let uniforms = Uniforms { time: start.elapsed().as_secs_f32(), light_dir };
+        let uniforms = Uniforms { time: ship_time, light_dir };
         fb.clear(config::BACKGROUND_COLOR);
+
+        // Escena 4: nave cargada desde OBJ, girando con delta time (prueba de Fase 1).
+        let ship_model = Mat4::from_translation(Vec3::new(0.0, 0.0, 0.0))
+            * Quat::from_axis_angle(Vec3::Y, ship_time * 0.6).to_mat4()
+            * Mat4::from_scale(Vec3::splat(1.3));
+        let scene_ship: Vec<(&Mesh, Mat4, &dyn FragmentShader)> = vec![(&ship_mesh, ship_model, &ship_shader)];
 
         let objects = match active {
             1 => &scene_star,
             2 => &scene_rocky,
-            _ => &scene_gas,
+            3 => &scene_gas,
+            _ => &scene_ship,
         };
         for (mesh, model, shader) in objects {
             rasterizer::draw_mesh(&mut fb, mesh, *model, view_proj, eye, *shader, &uniforms);

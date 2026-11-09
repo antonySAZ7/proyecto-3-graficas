@@ -1,23 +1,22 @@
-use glam::{Vec3, Vec4};
-use noise::{Fbm, MultiFractal, NoiseFn, Perlin};
-
+use crate::engine::math::{Vec3, Vec4};
+use crate::engine::noise::Fbm;
 use crate::shaders::{FragInput, FragmentShader, Uniforms};
 
 /// Luna, geometría aparte del planeta que acompaña. Cuatro capas: variación
 /// de albedo (mares vs tierras altas), cráteres, luz Lambertiana y
 /// oscurecimiento sutil del borde.
 pub struct MoonShader {
-    albedo: Fbm<Perlin>,
-    craters: Fbm<Perlin>,
+    albedo: Fbm,
+    craters: Fbm,
 }
 
 impl MoonShader {
     pub fn new(seed: u32) -> Self {
-        let albedo = Fbm::<Perlin>::new(seed)
+        let albedo = Fbm::new(seed)
             .set_octaves(4)
             .set_frequency(1.5)
             .set_persistence(0.5);
-        let craters = Fbm::<Perlin>::new(seed.wrapping_add(409))
+        let craters = Fbm::new(seed.wrapping_add(409))
             .set_octaves(2)
             .set_frequency(12.0)
             .set_persistence(0.5);
@@ -30,12 +29,12 @@ impl FragmentShader for MoonShader {
         let p = input.local.normalize();
 
         // Capa 1: variación de albedo, mares oscuros sobre tierras altas claras.
-        let a = self.albedo.get([(p.x * 2.5) as f64, (p.y * 2.5) as f64, (p.z * 2.5) as f64]) as f32;
+        let a = self.albedo.sample3(Vec3::new(p.x * 2.5, p.y * 2.5, p.z * 2.5));
         let maria = ((a - 0.1).max(0.0) * 3.0).clamp(0.0, 1.0);
         let base = Vec3::new(0.75, 0.74, 0.72).lerp(Vec3::new(0.35, 0.34, 0.35), maria);
 
         // Capa 2: cráteres pequeños y densos, con reborde más claro.
-        let c = self.craters.get([(p.x * 10.0) as f64, (p.y * 10.0) as f64, (p.z * 10.0) as f64]) as f32;
+        let c = self.craters.sample3(Vec3::new(p.x * 10.0, p.y * 10.0, p.z * 10.0));
         let crater_mask = ((c.abs() - 0.75).max(0.0) * 8.0).clamp(0.0, 1.0);
         let rim_mask = (((c.abs() - 0.68).max(0.0) * 10.0).clamp(0.0, 1.0) - crater_mask).max(0.0);
         let cratered = base * (1.0 - crater_mask * 0.6) + Vec3::splat(rim_mask * 0.15);

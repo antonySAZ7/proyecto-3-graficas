@@ -13,11 +13,11 @@ Referencia JS: `reference/js/{math,obj,meshes,renderer,shaders,game}.js`. Úsalo
 **Listo cuando:** `cargo run --release` muestra lo mismo que el lab, con la nueva estructura.
 
 ## Fase 1: Núcleo del motor
-- [ ] `math.rs`: Vec3, Mat4 (modelo, vista, proyección), orientación con cuaternión o base ortonormal (sin gimbal lock), alinear Y a una normal.
-- [ ] `noise.rs`: valor/Perlin/fbm con tabla de permutación y semilla.
-- [ ] `obj.rs`: lector OBJ con triangulación de caras y normales calculadas si faltan.
-- [ ] Bucle con delta time acotado.
-- [ ] Pruebas de math, OBJ y ruido determinista.
+- [x] `math.rs`: Vec3, Mat4 (modelo, vista, proyección), orientación con cuaternión o base ortonormal (sin gimbal lock), alinear Y a una normal.
+- [x] `noise.rs`: valor/Perlin/fbm con tabla de permutación y semilla.
+- [x] `obj.rs`: lector OBJ con triangulación de caras y normales calculadas si faltan.
+- [x] Bucle con delta time acotado.
+- [x] Pruebas de math, OBJ y ruido determinista.
 
 **Listo cuando:** la nave OBJ se dibuja con z-buffer y un shader propio.
 

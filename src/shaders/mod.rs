@@ -3,8 +3,9 @@ pub mod rocky;
 pub mod gas_giant;
 pub mod rings;
 pub mod moon;
+pub mod ship;
 
-use glam::{Vec3, Vec4};
+use crate::engine::math::{Vec3, Vec4};
 
 /// Datos que recibe un shader sobre el punto que va a colorear.
 pub struct FragInput {

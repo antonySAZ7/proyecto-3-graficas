@@ -1,4 +1,4 @@
-use glam::Vec3;
+use crate::engine::math::Vec3;
 
 /// Un vértice en espacio de objeto. El shader recibe `position` interpolada
 /// como `local`, así el ruido procedural no depende de la matriz de modelo.

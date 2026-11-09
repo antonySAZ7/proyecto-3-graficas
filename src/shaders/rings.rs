@@ -1,6 +1,5 @@
-use glam::{Vec3, Vec4};
-use noise::{NoiseFn, Perlin};
-
+use crate::engine::math::{Vec3, Vec4};
+use crate::engine::noise::Perlin;
 use crate::shaders::{FragInput, FragmentShader, Uniforms};
 
 /// Anillos del planeta, geometría aparte. Cuatro capas: gradiente radial
@@ -40,7 +39,7 @@ impl FragmentShader for RingShader {
 
         // Capa 2: bandas de densidad y grano fino, afectan color y transparencia.
         let bands = (r * 36.0).sin() * 0.5 + 0.5;
-        let grain_n = self.grain.get([(input.local.x * 25.0) as f64, (input.local.z * 25.0) as f64]) as f32;
+        let grain_n = self.grain.sample3(Vec3::new(input.local.x * 25.0, 0.0, input.local.z * 25.0));
         let density = (bands * 0.65 + (grain_n * 0.5 + 0.5) * 0.35).clamp(0.0, 1.0);
         let banded = base * (0.45 + 0.55 * density);
 

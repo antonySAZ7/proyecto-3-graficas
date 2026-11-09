@@ -1,23 +1,22 @@
-use glam::{Vec3, Vec4};
-use noise::{Fbm, MultiFractal, NoiseFn, Perlin};
-
+use crate::engine::math::{Vec3, Vec4};
+use crate::engine::noise::Fbm;
 use crate::shaders::{FragInput, FragmentShader, Uniforms};
 
 /// Estrella tipo sol. Cinco capas: gradiente base núcleo-borde, turbulencia
 /// de plasma animada, manchas solares, limb darkening y brillo pulsante.
 pub struct StarShader {
-    turbulence: Fbm<Perlin>,
-    spots: Fbm<Perlin>,
+    turbulence: Fbm,
+    spots: Fbm,
 }
 
 impl StarShader {
     pub fn new(seed: u32) -> Self {
-        let turbulence = Fbm::<Perlin>::new(seed)
+        let turbulence = Fbm::new(seed)
             .set_octaves(5)
             .set_frequency(1.6)
             .set_lacunarity(2.0)
             .set_persistence(0.55);
-        let spots = Fbm::<Perlin>::new(seed.wrapping_add(101))
+        let spots = Fbm::new(seed.wrapping_add(101))
             .set_octaves(3)
             .set_frequency(3.2)
             .set_persistence(0.5);
@@ -35,14 +34,12 @@ impl FragmentShader for StarShader {
         let base = Vec3::new(1.0, 0.86, 0.4).lerp(Vec3::new(1.0, 0.45, 0.08), lat * 0.4);
 
         // Capa 2: turbulencia de plasma animada (ruido fbm que se mueve con el tiempo).
-        let n1 = self
-            .turbulence
-            .get([(p.x * 2.0) as f64, (p.y * 2.0) as f64, (p.z * 2.0) as f64 + t as f64 * 0.25]) as f32;
+        let n1 = self.turbulence.sample3(Vec3::new(p.x * 2.0, p.y * 2.0, p.z * 2.0 + t * 0.25));
         let turb = (n1 * 0.5 + 0.5).clamp(0.0, 1.0);
         let plasma = base.lerp(Vec3::new(1.0, 0.97, 0.7), turb * 0.45);
 
         // Capa 3: manchas solares (parches oscuros por umbral de ruido).
-        let n2 = self.spots.get([(p.x * 4.0) as f64, (p.y * 4.0) as f64, (p.z * 4.0) as f64]) as f32;
+        let n2 = self.spots.sample3(Vec3::new(p.x * 4.0, p.y * 4.0, p.z * 4.0));
         let spot_mask = ((n2 - 0.5).max(0.0) * 6.0).clamp(0.0, 1.0);
         let spotted = plasma.lerp(Vec3::new(0.4, 0.1, 0.03), spot_mask);
 
