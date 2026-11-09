@@ -22,10 +22,10 @@ Referencia JS: `reference/js/{math,obj,meshes,renderer,shaders,game}.js`. Úsalo
 **Listo cuando:** la nave OBJ se dibuja con z-buffer y un shader propio.
 
 ## Fase 2: Nave, cámara y vuelo (facilidad de juego)
-- [ ] Cámara perseguidora 3D con suavizado; cabeceo, guiñada y alabeo.
-- [ ] Aceleración, frenado y giro progresivos con respuesta suave e independiente del equipo.
-- [ ] Mejoras sobre el JS: estabilización asistida, indicador de dirección al objetivo, velocidad crucero, límite de velocidad según cercanía a planetas.
-- [ ] Skybox de estrellas orientado con la cámara (sin traslación).
+- [x] Cámara perseguidora 3D con suavizado; cabeceo, guiñada y alabeo.
+- [x] Aceleración, frenado y giro progresivos con respuesta suave e independiente del equipo.
+- [x] Mejoras sobre el JS: estabilización asistida, indicador de dirección al objetivo, velocidad crucero, límite de velocidad según cercanía a planetas.
+- [x] Skybox de estrellas orientado con la cámara (sin traslación).
 
 **Listo cuando:** se vuela cómodo en el vacío, sin marearse.
 
