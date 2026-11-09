@@ -1,12 +1,25 @@
 pub mod star;
 pub mod rocky;
-pub mod gas_giant;
+pub mod earth;
+pub mod lava;
+pub mod ice;
+pub mod metal;
 pub mod rings;
 pub mod moon;
 pub mod ship;
 pub mod surface;
 
 use crate::engine::math::{Vec3, Vec4};
+
+/// Longitud/latitud en [0, 1) a partir de un punto en la esfera unitaria.
+/// Los shaders de planetas la usan para patrones de bandas, grietas o
+/// circuitos sin depender de UVs de malla (nuestras esferas no las tienen).
+pub fn spherical_uv(p: Vec3) -> (f32, f32) {
+    use std::f32::consts::{PI, TAU};
+    let u = p.z.atan2(p.x) / TAU + 0.5;
+    let v = p.y.clamp(-1.0, 1.0).asin() / PI + 0.5;
+    (u, v)
+}
 
 /// Datos que recibe un shader sobre el punto que va a colorear.
 pub struct FragInput {

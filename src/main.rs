@@ -23,7 +23,10 @@ use game::ship::Ship;
 use game::skybox::Skybox;
 use game::surface;
 use game::world::World;
-use shaders::gas_giant::GasGiantShader;
+use shaders::earth::EarthShader;
+use shaders::ice::IceShader;
+use shaders::lava::LavaShader;
+use shaders::metal::MetalShader;
 use shaders::moon::MoonShader;
 use shaders::rocky::RockyShader;
 use shaders::ship::ShipShader;
@@ -52,9 +55,11 @@ fn build_fractured_lod(seed: u32) -> LodSet<Mesh> {
 /// sola vez al inicio (las tablas de ruido no se recrean por frame).
 fn build_planet_shader(def: &bodies::BodyDef) -> Box<dyn FragmentShader> {
     match def.shader {
+        ShaderKind::Earth => Box::new(EarthShader::new(def.seed)),
+        ShaderKind::Lava => Box::new(LavaShader::new(def.seed)),
+        ShaderKind::Ice => Box::new(IceShader::new(def.seed)),
         ShaderKind::Rocky => Box::new(RockyShader::new(def.seed)),
-        ShaderKind::GasGiant => Box::new(GasGiantShader::new(def.seed)),
-        ShaderKind::Moon => Box::new(MoonShader::new(def.seed)),
+        ShaderKind::Metal => Box::new(MetalShader::new(def.seed)),
     }
 }
 

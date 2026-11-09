@@ -5,9 +5,11 @@
 /// porque no comparten su tipo con ningún planeta.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ShaderKind {
+    Earth,
+    Lava,
+    Ice,
     Rocky,
-    GasGiant,
-    Moon,
+    Metal,
 }
 
 pub struct BodyDef {
@@ -54,7 +56,7 @@ pub const PLANETS: &[BodyDef] = &[
         phase: -std::f32::consts::FRAC_PI_2,
         inclination: 0.05,
         rotation_speed: 0.5,
-        shader: ShaderKind::Rocky,
+        shader: ShaderKind::Earth,
         seed: 11,
         fractured: false,
     },
@@ -66,7 +68,7 @@ pub const PLANETS: &[BodyDef] = &[
         phase: 0.65,
         inclination: 0.09,
         rotation_speed: -0.7,
-        shader: ShaderKind::GasGiant,
+        shader: ShaderKind::Lava,
         seed: 23,
         fractured: false,
     },
@@ -78,7 +80,7 @@ pub const PLANETS: &[BodyDef] = &[
         phase: 2.7,
         inclination: 0.12,
         rotation_speed: 0.35,
-        shader: ShaderKind::Rocky,
+        shader: ShaderKind::Ice,
         seed: 37,
         fractured: false,
     },
@@ -90,7 +92,7 @@ pub const PLANETS: &[BodyDef] = &[
         phase: 4.35,
         inclination: 0.2,
         rotation_speed: 0.4,
-        shader: ShaderKind::GasGiant,
+        shader: ShaderKind::Rocky,
         seed: 53,
         fractured: true,
     },
@@ -102,7 +104,7 @@ pub const PLANETS: &[BodyDef] = &[
         phase: 1.72,
         inclination: 0.07,
         rotation_speed: -0.28,
-        shader: ShaderKind::Moon,
+        shader: ShaderKind::Metal,
         seed: 61,
         fractured: false,
     },

@@ -55,10 +55,10 @@ Referencia JS: `reference/js/{math,obj,meshes,renderer,shaders,game}.js`. Úsalo
 **Listo cuando:** la superficie se ve poblada y coherente desde cerca y sin parpadeos.
 
 ## Fase 6: Shaders
-- [ ] Mínimo 4 shaders visual e internamente distintos (Tierra, lava, hielo, metal) más sol, roca, nave y Galactus.
-- [ ] Al menos uno animado con el tiempo (plasma solar, nubes, lava).
-- [ ] Mapeo de normales procedural en la Tierra, calculado en el renderer por software.
-- [ ] Reutilizar lo ya hecho en el lab (estrella, rocoso, gaseoso, anillos, luna) donde encaje.
+- [x] Mínimo 4 shaders visual e internamente distintos (Tierra, lava, hielo, metal) más sol, roca y nave. Galactus queda para la Fase 7 (ahí se agrega como entidad).
+- [x] Al menos uno animado con el tiempo (plasma solar, nubes de la Tierra, lava, circuitos del Mundo de Plata).
+- [x] Mapeo de normales procedural en la Tierra, calculado en el renderer por software (gradiente del ruido de terreno por diferencias finitas).
+- [x] Reutilizar lo ya hecho en el lab (estrella, rocoso, luna) donde encaje; `gas_giant.rs` se retiró porque ningún cuerpo quedó con esa identidad visual.
 
 **Listo cuando:** cada cuerpo se identifica de un vistazo.
 
