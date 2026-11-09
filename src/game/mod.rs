@@ -6,4 +6,5 @@ pub mod input;
 pub mod physics;
 pub mod ship;
 pub mod skybox;
+pub mod surface;
 pub mod world;

@@ -4,6 +4,7 @@ pub mod gas_giant;
 pub mod rings;
 pub mod moon;
 pub mod ship;
+pub mod surface;
 
 use crate::engine::math::{Vec3, Vec4};
 

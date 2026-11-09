@@ -94,6 +94,29 @@ pub const MANUAL_PADDING: i32 = 8;
 pub const MANUAL_PANEL_COLOR: Vec4 = Vec4::new(0.03, 0.05, 0.09, 0.62);
 pub const MANUAL_TEXT_COLOR: Vec4 = Vec4::new(0.75, 0.95, 1.0, 1.0);
 
+// --- Deformación de malla del Planeta Fragmentado (Fase 5) ---
+/// Nivel de subdivisión del icosaedro por detalle (alto/medio/bajo).
+pub const FRACTURED_ICOSPHERE_SUBDIV_HIGH: u32 = 4;
+pub const FRACTURED_ICOSPHERE_SUBDIV_MEDIUM: u32 = 3;
+pub const FRACTURED_ICOSPHERE_SUBDIV_LOW: u32 = 1;
+pub const FRACTURED_DEFORM_OCTAVES: u32 = 5;
+pub const FRACTURED_DEFORM_FREQUENCY: f32 = 1.6;
+/// Fracción del radio que puede desplazar el ruido (0.18 = ±18%).
+pub const FRACTURED_DEFORM_AMPLITUDE: f32 = 0.18;
+
+// --- Objetos de superficie sobre la Tierra (Fase 5) ---
+/// Semilla de las 4 mallas propias (afecta solo el ruido de la roca).
+pub const SURFACE_MODEL_SEED: u32 = 303;
+/// Semilla de la distribución sobre la esfera: misma semilla, mismo mapa siempre.
+pub const SURFACE_SCATTER_SEED: u32 = 2026;
+pub const SURFACE_SCATTER_COUNT: usize = 36;
+pub const SURFACE_SCALE_MIN: f32 = 0.5;
+pub const SURFACE_SCALE_MAX: f32 = 0.85;
+/// Margen sobre el radio del planeta para que la base del objeto no quede enterrada.
+pub const SURFACE_OFFSET: f32 = 0.02;
+/// Distancia a la Tierra por debajo de la cual se dibujan sus objetos de superficie.
+pub const SURFACE_DRAW_DISTANCE: f32 = 40.0;
+
 // --- Rendimiento (Fase 4) ---
 /// Filas de framebuffer por banda de rasterización en paralelo (`rayon`).
 /// Menos filas = más bandas = más paralelismo, con algo más de overhead por banda.

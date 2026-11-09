@@ -7,3 +7,4 @@ pub mod mesh;
 pub mod noise;
 pub mod obj;
 pub mod rasterizer;
+pub mod rng;

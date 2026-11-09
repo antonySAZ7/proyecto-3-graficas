@@ -24,6 +24,9 @@ pub struct BodyDef {
     pub rotation_speed: f32,
     pub shader: ShaderKind,
     pub seed: u32,
+    /// Si es `true`, su malla no es la esfera UV compartida sino un icosaedro
+    /// subdividido y deformado con ruido multioctava (ver `main::build_fractured_lod`).
+    pub fractured: bool,
 }
 
 pub struct MoonDef {
@@ -53,6 +56,7 @@ pub const PLANETS: &[BodyDef] = &[
         rotation_speed: 0.5,
         shader: ShaderKind::Rocky,
         seed: 11,
+        fractured: false,
     },
     BodyDef {
         name: "Mundo Forja",
@@ -64,6 +68,7 @@ pub const PLANETS: &[BodyDef] = &[
         rotation_speed: -0.7,
         shader: ShaderKind::GasGiant,
         seed: 23,
+        fractured: false,
     },
     BodyDef {
         name: "Niflheim",
@@ -75,6 +80,7 @@ pub const PLANETS: &[BodyDef] = &[
         rotation_speed: 0.35,
         shader: ShaderKind::Rocky,
         seed: 37,
+        fractured: false,
     },
     BodyDef {
         name: "Planeta Fragmentado",
@@ -86,6 +92,7 @@ pub const PLANETS: &[BodyDef] = &[
         rotation_speed: 0.4,
         shader: ShaderKind::GasGiant,
         seed: 53,
+        fractured: true,
     },
     BodyDef {
         name: "Mundo de Plata",
@@ -97,6 +104,7 @@ pub const PLANETS: &[BodyDef] = &[
         rotation_speed: -0.28,
         shader: ShaderKind::Moon,
         seed: 61,
+        fractured: false,
     },
 ];
 

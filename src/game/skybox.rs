@@ -3,6 +3,7 @@
 
 use crate::engine::framebuffer::Framebuffer;
 use crate::engine::math::{Mat4, Vec3, Vec4};
+use crate::engine::rng::Lcg;
 use crate::game::config;
 
 struct Star {
@@ -14,22 +15,16 @@ pub struct Skybox {
     stars: Vec<Star>,
 }
 
-/// LCG determinista: misma semilla produce siempre el mismo cielo (sin dependencias externas).
-fn next_random(state: &mut u32) -> f32 {
-    *state = state.wrapping_mul(1664525).wrapping_add(1013904223);
-    *state as f32 / u32::MAX as f32
-}
-
 impl Skybox {
     pub fn new(seed: u32, count: usize) -> Self {
-        let mut state = seed;
+        let mut rng = Lcg::new(seed);
         let mut stars = Vec::with_capacity(count);
         for _ in 0..count {
-            let y = next_random(&mut state) * 2.0 - 1.0;
-            let angle = next_random(&mut state) * std::f32::consts::TAU;
+            let y = rng.next_f32() * 2.0 - 1.0;
+            let angle = rng.next_f32() * std::f32::consts::TAU;
             let radial = (1.0 - y * y).max(0.0).sqrt();
             let direction = Vec3::new(angle.cos() * radial, y, angle.sin() * radial);
-            let brightness = 0.35 + next_random(&mut state) * 0.65;
+            let brightness = 0.35 + rng.next_f32() * 0.65;
             stars.push(Star { direction, brightness });
         }
         Self { stars }

@@ -21,6 +21,28 @@ pub fn select_lod(distance: f32, radius: f32, medium_ratio: f32, low_ratio: f32)
     }
 }
 
+/// Agrupa las 3 variantes de detalle de un recurso (p.ej. las 3 mallas de un
+/// cuerpo celeste) y selecciona la que corresponde a un `LodLevel`.
+pub struct LodSet<T> {
+    high: T,
+    medium: T,
+    low: T,
+}
+
+impl<T> LodSet<T> {
+    pub fn new(high: T, medium: T, low: T) -> Self {
+        Self { high, medium, low }
+    }
+
+    pub fn get(&self, level: LodLevel) -> &T {
+        match level {
+            LodLevel::High => &self.high,
+            LodLevel::Medium => &self.medium,
+            LodLevel::Low => &self.low,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -8,9 +8,10 @@ use minifb::{Window, WindowOptions};
 
 use engine::culling::Frustum;
 use engine::framebuffer::Framebuffer;
-use engine::lod::{self, LodLevel};
+use engine::lod::{self, LodLevel, LodSet};
 use engine::math::{Mat4, Quat, Vec3};
 use engine::mesh::{self, Mesh};
+use engine::noise::Fbm;
 use engine::obj;
 use engine::rasterizer::RenderQueue;
 use game::bodies::{self, ShaderKind};
@@ -20,13 +21,32 @@ use game::hud;
 use game::input;
 use game::ship::Ship;
 use game::skybox::Skybox;
+use game::surface;
 use game::world::World;
 use shaders::gas_giant::GasGiantShader;
 use shaders::moon::MoonShader;
 use shaders::rocky::RockyShader;
 use shaders::ship::ShipShader;
 use shaders::star::StarShader;
+use shaders::surface::SurfaceShader;
 use shaders::{FragmentShader, Uniforms};
+
+/// Malla deformada del Planeta Fragmentado por nivel de detalle: icosaedro
+/// subdividido y desplazado con ruido multioctava (Fase 5), en vez de la
+/// esfera UV que comparten el resto de los cuerpos.
+fn build_fractured_lod(seed: u32) -> LodSet<Mesh> {
+    let build = |subdivisions: u32| {
+        let mut m = mesh::icosphere(subdivisions);
+        let noise = Fbm::new(seed).set_octaves(config::FRACTURED_DEFORM_OCTAVES).set_frequency(config::FRACTURED_DEFORM_FREQUENCY);
+        mesh::displace(&mut m, |dir| 1.0 + noise.sample3(dir) * config::FRACTURED_DEFORM_AMPLITUDE);
+        m
+    };
+    LodSet::new(
+        build(config::FRACTURED_ICOSPHERE_SUBDIV_HIGH),
+        build(config::FRACTURED_ICOSPHERE_SUBDIV_MEDIUM),
+        build(config::FRACTURED_ICOSPHERE_SUBDIV_LOW),
+    )
+}
 
 /// Shader de superficie según el tipo de dato de `bodies.rs`; construido una
 /// sola vez al inicio (las tablas de ruido no se recrean por frame).
@@ -60,19 +80,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Tres mallas esféricas (alta/media/baja), reutilizadas para el sol, cada
     // planeta y la luna; cuál se usa depende de la distancia a la cámara
     // (LOD, Fase 4). El tamaño real lo da la matriz de modelo.
-    let sphere_high = mesh::sphere(config::SPHERE_STACKS_HIGH, config::SPHERE_SLICES_HIGH);
-    let sphere_medium = mesh::sphere(config::SPHERE_STACKS_MEDIUM, config::SPHERE_SLICES_MEDIUM);
-    let sphere_low = mesh::sphere(config::SPHERE_STACKS_LOW, config::SPHERE_SLICES_LOW);
-    let lod_mesh = |level: LodLevel| -> &Mesh {
-        match level {
-            LodLevel::High => &sphere_high,
-            LodLevel::Medium => &sphere_medium,
-            LodLevel::Low => &sphere_low,
-        }
-    };
+    let sphere_lod = LodSet::new(
+        mesh::sphere(config::SPHERE_STACKS_HIGH, config::SPHERE_SLICES_HIGH),
+        mesh::sphere(config::SPHERE_STACKS_MEDIUM, config::SPHERE_SLICES_MEDIUM),
+        mesh::sphere(config::SPHERE_STACKS_LOW, config::SPHERE_SLICES_LOW),
+    );
     let sun_shader = StarShader::new(bodies::SUN_SEED);
     let moon_shader = MoonShader::new(bodies::MOON.seed);
     let planet_shaders: Vec<Box<dyn FragmentShader>> = bodies::PLANETS.iter().map(build_planet_shader).collect();
+    // Solo el Planeta Fragmentado (`fractured: true` en bodies.rs) usa una
+    // malla propia deformada; el resto comparte `sphere_lod` (dato, no `if`).
+    let planet_lods: Vec<Option<LodSet<Mesh>>> =
+        bodies::PLANETS.iter().map(|def| if def.fractured { Some(build_fractured_lod(def.seed)) } else { None }).collect();
+
+    let surface_models = surface::build_models(config::SURFACE_MODEL_SEED);
+    let surface_shaders: Vec<SurfaceShader> = surface::KINDS.iter().map(|&kind| SurfaceShader::for_kind(kind)).collect();
+    let surface_instances = surface::scatter(config::SURFACE_SCATTER_SEED, config::SURFACE_SCATTER_COUNT);
 
     let skybox = Skybox::new(config::STARFIELD_SEED, config::STARFIELD_COUNT);
 
@@ -161,15 +184,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         if let Some(level) = visible_lod(world.sun_position, bodies::SUN_RADIUS) {
             let sun_model = Mat4::from_translation(world.sun_position) * Mat4::from_scale(Vec3::splat(bodies::SUN_RADIUS));
-            render_queue.push_mesh(lod_mesh(level), sun_model, view_proj, eye, &sun_shader, (config::WIDTH, config::HEIGHT));
+            render_queue.push_mesh(sphere_lod.get(level), sun_model, view_proj, eye, &sun_shader, (config::WIDTH, config::HEIGHT));
         }
 
-        for (planet, shader) in world.planets.iter().zip(planet_shaders.iter()) {
+        for (i, (planet, shader)) in world.planets.iter().zip(planet_shaders.iter()).enumerate() {
             if let Some(level) = visible_lod(planet.position, planet.def.radius) {
                 let model = Mat4::from_translation(planet.position)
                     * Quat::from_axis_angle(Vec3::Y, planet.rotation).to_mat4()
                     * Mat4::from_scale(Vec3::splat(planet.def.radius));
-                render_queue.push_mesh(lod_mesh(level), model, view_proj, eye, shader.as_ref(), (config::WIDTH, config::HEIGHT));
+                let planet_mesh = planet_lods[i].as_ref().map_or_else(|| sphere_lod.get(level), |set| set.get(level));
+                render_queue.push_mesh(planet_mesh, model, view_proj, eye, shader.as_ref(), (config::WIDTH, config::HEIGHT));
             }
         }
 
@@ -177,7 +201,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let moon_model = Mat4::from_translation(world.moon_position)
                 * Quat::from_axis_angle(Vec3::Y, world.moon_rotation).to_mat4()
                 * Mat4::from_scale(Vec3::splat(bodies::MOON.radius));
-            render_queue.push_mesh(lod_mesh(level), moon_model, view_proj, eye, &moon_shader, (config::WIDTH, config::HEIGHT));
+            render_queue.push_mesh(sphere_lod.get(level), moon_model, view_proj, eye, &moon_shader, (config::WIDTH, config::HEIGHT));
+        }
+
+        // Objetos de superficie de la Tierra (Fase 5): solo de cerca, cada
+        // uno con su propio descarte por frustum (no tienen niveles de LOD).
+        let earth = &world.planets[bodies::EARTH_INDEX];
+        if eye.distance(earth.position) < config::SURFACE_DRAW_DISTANCE {
+            let earth_transform = Mat4::from_translation(earth.position) * Quat::from_axis_angle(Vec3::Y, earth.rotation).to_mat4();
+            let earth_radius = earth.def.radius;
+            for instance in &surface_instances {
+                let model = surface::instance_model(instance, earth_transform, earth_radius);
+                let world_pos = model.transform_point3(Vec3::ZERO);
+                if frustum_culling_enabled && !frustum.sphere_visible(world_pos, instance.scale * 1.5) {
+                    objects_culled += 1;
+                    continue;
+                }
+                objects_visible += 1;
+                let shader = &surface_shaders[instance.kind.index()];
+                render_queue.push_mesh(surface_models.get(instance.kind), model, view_proj, eye, shader, (config::WIDTH, config::HEIGHT));
+            }
         }
 
         let ship_model = Mat4::from_translation(ship.position) * ship.orientation.to_mat4() * Mat4::from_scale(Vec3::splat(0.58));

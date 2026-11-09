@@ -46,11 +46,11 @@ Referencia JS: `reference/js/{math,obj,meshes,renderer,shaders,game}.js`. Úsalo
 **Listo cuando:** 60 FPS estables a la resolución objetivo y los contadores cambian de verdad con `F2`/`F3`.
 
 ## Fase 5: Superficie y geometría
-- [ ] 4 modelos propios sobre la Tierra (árbol cristalino, roca, torre, baliza).
-- [ ] Distribución procedural con semilla fija configurable, sobre toda la esfera, con prueba de reproducibilidad.
-- [ ] Posición y orientación correctas sobre la superficie mientras el planeta rota.
-- [ ] Deformación de geometría por ruido multioctava (Planeta Fragmentado).
-- [ ] Generación/subdivisión procedural de mallas antes de rasterizar.
+- [x] 4 modelos propios sobre la Tierra (árbol cristalino, roca, torre, baliza).
+- [x] Distribución procedural con semilla fija configurable, sobre toda la esfera, con prueba de reproducibilidad.
+- [x] Posición y orientación correctas sobre la superficie mientras el planeta rota.
+- [x] Deformación de geometría por ruido multioctava (Planeta Fragmentado).
+- [x] Generación/subdivisión procedural de mallas antes de rasterizar.
 
 **Listo cuando:** la superficie se ve poblada y coherente desde cerca y sin parpadeos.
 
