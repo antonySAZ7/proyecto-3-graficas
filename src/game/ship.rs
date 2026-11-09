@@ -67,7 +67,7 @@ impl Ship {
 
     fn update_rotation(&mut self, input: &InputState, dt: f32) {
         let mut pitch_target = input.pitch * config::SHIP_PITCH_RATE;
-        let mut roll_target = -input.roll * config::SHIP_ROLL_RATE;
+        let mut roll_target = input.roll * config::SHIP_ROLL_RATE;
         let yaw_target = input.yaw * config::SHIP_YAW_RATE;
 
         // Estabilización asistida: sin entrada de cabeceo/alabeo, la nave se

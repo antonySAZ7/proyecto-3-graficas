@@ -1,3 +1,4 @@
+pub mod font;
 pub mod framebuffer;
 pub mod math;
 pub mod mesh;

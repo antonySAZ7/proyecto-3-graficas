@@ -4,7 +4,7 @@ mod shaders;
 
 use std::time::Instant;
 
-use minifb::{Key, KeyRepeat, Window, WindowOptions};
+use minifb::{Window, WindowOptions};
 
 use engine::framebuffer::Framebuffer;
 use engine::math::{Mat4, Vec3};
@@ -13,6 +13,7 @@ use engine::obj;
 use engine::rasterizer;
 use game::camera::ChaseCamera;
 use game::config;
+use game::hud;
 use game::input;
 use game::ship::Ship;
 use game::skybox::Skybox;
@@ -52,22 +53,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut last_frame = Instant::now();
     let mut elapsed = 0.0f32;
     let mut title_timer = 0.0f32;
+    let mut paused = false;
+    let mut show_manual = true;
 
-    while window.is_open() && !window.is_key_down(Key::Escape) {
+    while window.is_open() && !input::quit_requested(&window) {
         // Delta time acotado: evita saltos de animación tras una pausa o un frame lento.
         let now = Instant::now();
         let dt = (now - last_frame).as_secs_f32().min(1.0 / 20.0);
         last_frame = now;
-        elapsed += dt;
 
-        if window.is_key_pressed(Key::R, KeyRepeat::No) {
+        let input_state = input::read(&window);
+        if input_state.reset {
             ship = Ship::new(Vec3::new(0.0, 0.0, 20.0));
             camera = ChaseCamera::new(&ship);
         }
+        if input_state.pause {
+            paused = !paused;
+        }
+        if input_state.toggle_manual {
+            show_manual = !show_manual;
+        }
 
-        let input_state = input::read(&window);
-        ship.update(&input_state, dt);
-        camera.update(&ship, dt);
+        if !paused {
+            elapsed += dt;
+            ship.update(&input_state, dt);
+            camera.update(&ship, dt);
+        }
 
         let view_proj = proj * camera.view();
         let skybox_view_proj = proj * camera.view_rotation_only();
@@ -83,6 +94,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ship_model = Mat4::from_translation(ship.position) * ship.orientation.to_mat4() * Mat4::from_scale(Vec3::splat(0.58));
         rasterizer::draw_mesh(&mut fb, &ship_mesh, ship_model, view_proj, eye, &ship_shader, &uniforms);
 
+        if show_manual {
+            hud::draw_controls_manual(&mut fb);
+        }
+
         window.update_with_buffer(&fb.pixels, config::WIDTH, config::HEIGHT)?;
 
         title_timer += dt;
@@ -93,11 +108,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let target_dir = ship.direction_to_target();
             let bearing = target_dir.dot(ship.right()).atan2(target_dir.dot(ship.forward())).to_degrees();
             window.set_title(&format!(
-                "Fantasticar | vel {:>5.1} u/s | rumbo faro {:>4.0} deg | crucero [C] {} | estabilizacion [Z] {} | R reinicia",
+                "Fantasticar | vel {:>5.1} u/s | rumbo faro {:>4.0} deg | crucero {} | estabilizacion {} | {}{}",
                 ship.speed,
                 bearing,
                 if ship.cruise_enabled { "ON" } else { "off" },
                 if ship.stabilize_assist { "ON" } else { "off" },
+                if paused { "PAUSADO | " } else { "" },
+                "F1 manual",
             ));
         }
     }

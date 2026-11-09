@@ -1,5 +1,6 @@
 pub mod camera;
 pub mod config;
+pub mod hud;
 pub mod input;
 pub mod physics;
 pub mod ship;

@@ -1,6 +1,6 @@
 //! Todos los números ajustables del juego viven aquí.
 
-use crate::engine::math::Vec3;
+use crate::engine::math::{Vec3, Vec4};
 
 pub const WIDTH: usize = 900;
 pub const HEIGHT: usize = 620;
@@ -36,6 +36,8 @@ pub const SHIP_DRAG: f32 = 0.5;
 pub const SHIP_CRUISE_ADJUST_RATE: f32 = 6.0;
 pub const SHIP_CRUISE_RESPONSE: f32 = 3.0;
 pub const SHIP_MAX_SPEED: f32 = 22.0;
+/// Si es `true`, invierte el cabeceo (por defecto, sin invertir: ↑ = nariz abajo).
+pub const INVERT_PITCH: bool = false;
 
 // --- Límite de velocidad por cercanía (punto de referencia temporal; en Fase 3 será el planeta más cercano) ---
 pub const NAV_TARGET_POINT: Vec3 = Vec3::new(0.0, 0.0, 0.0);
@@ -55,3 +57,11 @@ pub const CAMERA_UP_SMOOTHING: f32 = 7.0;
 pub const STARFIELD_SEED: u32 = 20260;
 pub const STARFIELD_COUNT: usize = 420;
 pub const STARFIELD_RADIUS: f32 = 90.0;
+
+// --- Manual de controles (HUD mínimo, Fase 2) ---
+pub const MANUAL_TEXT_SCALE: i32 = 2;
+pub const MANUAL_LINE_SPACING: i32 = 2;
+pub const MANUAL_MARGIN: i32 = 10;
+pub const MANUAL_PADDING: i32 = 8;
+pub const MANUAL_PANEL_COLOR: Vec4 = Vec4::new(0.03, 0.05, 0.09, 0.62);
+pub const MANUAL_TEXT_COLOR: Vec4 = Vec4::new(0.75, 0.95, 1.0, 1.0);
