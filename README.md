@@ -1,96 +1,81 @@
 # Fantasticar: Defensa de la Tierra
 
-Proyecto final de Gráficas por Computadora. Es una batalla espacial académica inspirada en la estética de *Fantastic Four*: una nave azul y blanca defiende la Tierra de un devorador cósmico colosal.
+Proyecto final de Gráficas por Computadora (UVG): sistema solar explorable
+con nave, renderer 3D por software propio en Rust. Plan de desarrollo por
+fases y checklist de rúbrica en [`PLAN.md`](PLAN.md).
 
-La escena usa un **renderizador 3D por software propio**. Canvas 2D solamente presenta el arreglo de píxeles mediante `putImageData`; no se usa WebGL, Three.js, un motor de juegos, funciones 3D del navegador ni shaders de GPU. El framebuffer, z-buffer, rasterizador de triángulos, cámara, matrices, iluminación y shaders se ejecutan en CPU con JavaScript.
+**Estado actual (Fase 0):** base del lab de shaders reorganizada según la
+arquitectura de [`CLAUDE.md`](CLAUDE.md) (`engine/`, `shaders/`, `game/`).
+Software renderer en Rust: pipeline propio de
+transformación de vértices, rasterización con z-buffer y shaders por
+fragmento, mostrado en una ventana con [`minifb`](https://crates.io/crates/minifb).
+No se usa ninguna textura ni material: todo el color sale de funciones de
+shader que combinan ruido procedural, iluminación e interpolación de
+atributos.
 
-## Ejecutar
+## Cuerpos
 
-Requisitos: Python 3 y un navegador moderno. No hay paquetes que instalar.
-
-```powershell
-cd "C:\Users\tempo\Desktop\UVG\ciclo 6\Grafica\proyecto 3"
-python -m http.server 8080
-```
-
-Abrir [http://localhost:8080](http://localhost:8080). No conviene abrir `index.html` con doble clic porque el navegador bloquea la carga del modelo OBJ desde `file://`.
-
-Pruebas opcionales:
-
-```powershell
-npm run check
-npm test
-```
+- **Estrella (sol):** 5 capas — gradiente base núcleo/borde, turbulencia de
+  plasma animada (ruido fbm), manchas solares (ruido umbralizado), limb
+  darkening según el ángulo de vista, y un pulso de brillo en el tiempo.
+- **Planeta rocoso:** 5 capas — color por elevación (tierras bajas/medias/
+  altas), cráteres (ruido umbralizado), casquetes polares de hielo,
+  iluminación Lambertiana + ambiente, y brillo atmosférico delgado (fresnel).
+- **Gigante gaseoso:** 4 capas — bandas de latitud deformadas y animadas
+  (nubes fluyendo con el tiempo), una tormenta/vórtice localizado, iluminación
+  Lambertiana, y una bruma atmosférica gruesa (fresnel).
+- **Anillos:** geometría separada (un anillo/disco), 4 capas — gradiente
+  radial, bandas de densidad + grano (que también controlan la
+  transparencia, simulando huecos), iluminación sobre el plano del anillo, y
+  la sombra que el planeta proyecta sobre el anillo (test analítico
+  esfera/rayo de luz).
+- **Luna:** geometría separada (otra esfera), 4 capas — variación de albedo
+  (mares oscuros vs. tierras altas), cráteres densos con reborde, iluminación
+  Lambertiana de terminador duro (sin atmósfera), y oscurecimiento sutil del
+  borde.
 
 ## Controles
 
-| Tecla | Acción |
-|---|---|
-| `W` / `S` | Acelerar / frenar o retroceder |
-| `A` / `D` | Guiñada izquierda / derecha |
-| `↑` / `↓` | Cabeceo |
-| `Q` / `E` | Alabeo |
-| `Shift` + `W` | Aceleración fuerte |
-| `O` | Activar/desactivar asistencia para rodear el planeta más cercano |
-| `H` | Salto warp animado |
-| `Espacio` | Disparar el rayo de la nave |
-| `R` | Reiniciar cerca de la Tierra |
-| `F1` | Ocultar/mostrar HUD |
-| `F2` | Comparar frustum culling encendido/apagado |
-| `F3` | Comparar LOD dinámico con máximo detalle |
-| `P` | Pausa |
+- `1` — ver la estrella
+- `2` — ver el planeta rocoso con su luna
+- `3` — ver el gigante gaseoso con sus anillos
+- `Esc` — salir
 
-## Qué contiene
+La cámara es fija en las tres escenas.
 
-- Cinco planetas distinguibles: Tierra, Mundo Forja, Niflheim, Planeta Fragmentado y Mundo de Plata.
-- Sol animado, Luna, órbitas y rotaciones basadas en tiempo transcurrido.
-- Nave original cargada desde `assets/models/fantasticar.obj` y cámara perseguidora 3D.
-- Acercamiento continuo a la superficie, vuelo libre y modo orbital sin cambiar de escena.
-- Gravedad planetaria, aceleración/giro progresivos y colisiones esféricas.
-- Cuatro modelos de superficie propios: árbol cristalino, roca, torre y baliza.
-- Distribución procedural reproducible sobre la esfera con semilla `2026`.
-- Shaders CPU diferentes para Tierra, Sol, lava, hielo, metal, roca, nave y Galactus.
-- Normal mapping procedural en la Tierra, geometría deformada y tres niveles de subdivisión/LOD.
-- Frustum culling, contadores de trabajo y comparación interactiva con `F2`/`F3`.
-- Skybox estrellado orientado con la cámara, efecto warp y combate con rayos.
+## Cómo correr
 
-La correspondencia exacta con cada punto se encuentra en [RUBRICA.md](./RUBRICA.md).
+```
+cargo run --release
+```
 
-## Arquitectura para explicar en la defensa
+## Capturas
 
-- `src/math.js`: vectores, matrices, cámara, transformaciones y ruido procedural.
-- `src/obj.js`: lector OBJ y triangulación de caras.
-- `src/meshes.js`: esferas subdivididas, primitivas, deformación y LOD.
-- `src/renderer.js`: framebuffer, z-buffer, recorte cercano, rasterización, interpolación con corrección de perspectiva, estrellas y descarte.
-- `src/shaders.js`: shaders de fragmento ejecutados por cada píxel en CPU.
-- `src/game.js`: simulación, controles, órbitas, gravedad, colisiones, cámara, Galactus y composición de escena.
+**Estrella**
 
-Parámetros fáciles de modificar en vivo:
+![Estrella](screenshots/01_estrella.png)
 
-- Radio de la Tierra: `radius` del objeto `earth` en `src/game.js`.
-- Velocidad orbital: `orbitSpeed` de cualquier planeta.
-- Semilla procedural: argumento de `createSurfaceInstances(2026, 28)`.
-- Intensidad de normal mapping: factores `0.09` y `0.025` de `earthMaterial()`.
-- Resolución interna: `new SoftwareRenderer(canvas, 480, 270)`.
+**Planeta rocoso con su luna**
 
-## Entrega
+![Planeta rocoso con luna](screenshots/02_rocoso_con_luna.png)
 
-Antes de subir el repositorio:
+**Gigante gaseoso con anillos**
 
-1. Cambiar esta sección para incluir nombres, carnés y contribuciones reales de cada integrante.
-2. Grabar el recorrido indicado en [GUION_VIDEO.md](./GUION_VIDEO.md).
-3. Ejecutar `npm test` y comprobar que las cuatro pruebas pasan.
-4. Abrir el proyecto en el equipo de la demostración y comprobar rendimiento.
-5. Confirmar con el profesor que Canvas 2D como presentador del framebuffer es aceptable; la rúbrica permite una biblioteca de ventana, pero el curso puede tener una preferencia de lenguaje no escrita en el PDF.
+![Gigante gaseoso con anillos](screenshots/03_gigante_gaseoso_con_anillos.png)
 
-## Integrantes y contribuciones
+## Estructura del código
 
-- **[Nombre / carné]**: [describir contribución técnica concreta].
-- **[Nombre / carné, si aplica]**: [describir contribución técnica concreta].
-
-## Recursos y asistencia
-
-- Modelo de nave, geometría procedural, shaders y código: originales para este proyecto.
-- No se usan texturas, modelos ni audios externos.
-- Se utilizó OpenAI Codex como asistencia para planificación, programación, documentación y pruebas. Los integrantes deben revisar, comprender y poder explicar todo el código entregado.
-- Los nombres y conceptos inspirados en *Fantastic Four* pertenecen a sus respectivos titulares; esta es una obra académica sin fines comerciales y no incorpora recursos oficiales.
+- `src/engine/framebuffer.rs` — buffer de píxeles + z-buffer, con mezcla
+  alfa para los anillos.
+- `src/engine/mesh.rs` — generación de la esfera (UV sphere) y del anillo
+  (annulus plano); ambas geometrías son independientes y reutilizables.
+- `src/engine/rasterizer.rs` — pipeline de rasterización: transformación
+  objeto→mundo→clip→NDC→pantalla, interpolación con corrección de
+  perspectiva, backface culling y prueba de profundidad.
+- `src/shaders/mod.rs` — trait `FragmentShader` y los `Uniforms` (tiempo,
+  dirección de luz) compartidos por todos los shaders.
+- `src/shaders/*.rs` — un shader por cuerpo celeste (estrella, rocoso,
+  gigante gaseoso, anillos, luna).
+- `src/game/config.rs` — números ajustables (resolución, cámara, geometría).
+- `src/main.rs` — ventana, cámara fija, construcción de las 3 escenas y el
+  manejo de teclas.
