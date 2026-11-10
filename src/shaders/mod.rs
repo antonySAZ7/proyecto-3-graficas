@@ -1,7 +1,9 @@
 pub mod star;
 pub mod rocky;
 pub mod earth;
+pub mod galactus;
 pub mod lava;
+pub mod laser;
 pub mod ice;
 pub mod metal;
 pub mod rings;

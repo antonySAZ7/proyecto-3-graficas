@@ -26,7 +26,6 @@ pub enum Action {
     /// Depuración de rendimiento (Fase 4): comparar con culling/LOD apagado.
     ToggleFrustumCulling,
     ToggleMaxLod,
-    /// Reservadas para fases futuras: aparecen en el manual pero sin lógica todavía.
     OrbitAssist,
     Warp,
     Fire,
@@ -55,8 +54,8 @@ pub const BINDINGS: &[Binding] = &[
     Binding { action: Action::Cruise, key: Key::C, label: "C", implemented: true },
     Binding { action: Action::StabilizeAssist, key: Key::Z, label: "Z", implemented: true },
     Binding { action: Action::OrbitAssist, key: Key::O, label: "O", implemented: true },
-    Binding { action: Action::Warp, key: Key::H, label: "H", implemented: false },
-    Binding { action: Action::Fire, key: Key::Space, label: "ESPACIO", implemented: false },
+    Binding { action: Action::Warp, key: Key::H, label: "H", implemented: true },
+    Binding { action: Action::Fire, key: Key::Space, label: "ESPACIO", implemented: true },
     Binding { action: Action::Reset, key: Key::R, label: "R", implemented: true },
     Binding { action: Action::Pause, key: Key::P, label: "P", implemented: true },
     Binding { action: Action::ToggleManual, key: Key::F1, label: "F1", implemented: true },
@@ -134,6 +133,10 @@ pub struct InputState {
     pub toggle_max_lod: bool,
     pub pause: bool,
     pub reset: bool,
+    /// Impulso de warp (`H`), mantenido mientras se quiere acelerar a fondo.
+    pub warp: bool,
+    /// Disparo (`Espacio`), mantenido para fuego sostenido (el enfriamiento limita la cadencia real).
+    pub fire: bool,
 }
 
 pub fn read(window: &Window) -> InputState {
@@ -159,6 +162,8 @@ pub fn read(window: &Window) -> InputState {
         toggle_max_lod: is_pressed(window, Action::ToggleMaxLod),
         pause: is_pressed(window, Action::Pause),
         reset: is_pressed(window, Action::Reset),
+        warp: is_down(window, Action::Warp),
+        fire: is_down(window, Action::Fire),
     }
 }
 

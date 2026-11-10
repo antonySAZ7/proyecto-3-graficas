@@ -22,6 +22,9 @@ pub struct Ship {
     pub orbit_assist: bool,
     /// Último cuerpo contra el que colisionó, si lo hubo este frame.
     pub last_collision: Option<&'static str>,
+    /// Carga del impulso de warp (`H`), 0 (apagado) .. 1 (a pleno); sube y
+    /// baja suave en vez de activarse de golpe (ver `config::WARP_RAMP_RESPONSE`).
+    pub warp_charge: f32,
 }
 
 impl Ship {
@@ -37,6 +40,7 @@ impl Ship {
             stabilize_assist: true,
             orbit_assist: false,
             last_collision: None,
+            warp_charge: 0.0,
         }
     }
 
@@ -112,6 +116,11 @@ impl Ship {
             self.cruise_speed = self.speed;
         }
 
+        // Carga de warp: sube/baja suave en vez de activarse de golpe, así la
+        // aceleración extra y la estela visual del skybox entran gradualmente.
+        let warp_target = if input.warp { 1.0 } else { 0.0 };
+        self.warp_charge += (warp_target - self.warp_charge) * (1.0 - (-config::WARP_RAMP_RESPONSE * dt).exp());
+
         let accel = if input.boost { config::SHIP_BOOST_ACCEL } else { config::SHIP_ACCEL };
         let forward = self.forward();
 
@@ -134,7 +143,11 @@ impl Ship {
             self.apply_orbit_assist(world, dt);
         }
 
-        self.velocity = physics::clamp_length(self.velocity, self.max_speed_here(world));
+        // El warp amplía el límite de velocidad y empuja hacia adelante; a
+        // carga 0 ambos términos desaparecen y el vuelo queda igual que antes.
+        let max_speed = self.max_speed_here(world) * (1.0 + (config::WARP_SPEED_MULTIPLIER - 1.0) * self.warp_charge);
+        self.velocity = self.velocity + forward * (self.warp_charge * config::WARP_EXTRA_ACCEL * dt);
+        self.velocity = physics::clamp_length(self.velocity, max_speed);
         self.position = self.position + self.velocity * dt;
 
         let (position, velocity, collided) = world.resolve_collision(self.position, self.velocity);

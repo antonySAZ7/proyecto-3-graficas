@@ -33,6 +33,12 @@ pub struct World {
     pub planets: Vec<BodyInstance>,
     pub moon_position: Vec3,
     pub moon_rotation: f32,
+    pub galactus_position: Vec3,
+    pub galactus_rotation: f32,
+    /// Impactos de la nave acumulados desde el último repliegue.
+    pub galactus_hits: u32,
+    /// Contador para elegir el siguiente punto de reaparición (ver `respawn_galactus`).
+    galactus_spawn_index: u32,
 }
 
 /// Posición sobre una órbita circular inclinada: primero se ubica en el plano
@@ -50,8 +56,18 @@ impl World {
             .iter()
             .map(|def| BodyInstance { def, position: Vec3::ZERO, rotation: 0.0 })
             .collect();
-        let mut world = Self { sun_position: Vec3::ZERO, planets, moon_position: Vec3::ZERO, moon_rotation: 0.0 };
+        let mut world = Self {
+            sun_position: Vec3::ZERO,
+            planets,
+            moon_position: Vec3::ZERO,
+            moon_rotation: 0.0,
+            galactus_position: Vec3::ZERO,
+            galactus_rotation: 0.0,
+            galactus_hits: 0,
+            galactus_spawn_index: 0,
+        };
         world.update(0.0);
+        world.respawn_galactus();
         world
     }
 
@@ -72,6 +88,49 @@ impl World {
         std::iter::once(Attractor { name: bodies::SUN_NAME, position: self.sun_position, radius: bodies::SUN_RADIUS })
             .chain(self.planets.iter().map(|p| Attractor { name: p.def.name, position: p.position, radius: p.def.radius }))
             .chain(std::iter::once(Attractor { name: bodies::MOON.name, position: self.moon_position, radius: bodies::MOON.radius }))
+            .chain(std::iter::once(Attractor { name: bodies::GALACTUS.name, position: self.galactus_position, radius: bodies::GALACTUS.radius }))
+    }
+
+    /// Mueve a Galactus hacia la posición actual de la Tierra (lo persigue,
+    /// ya que la Tierra también se mueve en su órbita), con `dt` como todo
+    /// movimiento del juego. A diferencia de las órbitas (función pura del
+    /// tiempo absoluto), este avance es acumulativo porque depende de los
+    /// impactos del jugador, no solo del reloj.
+    pub fn update_galactus(&mut self, dt: f32) {
+        self.galactus_rotation += bodies::GALACTUS.rotation_speed * dt;
+
+        let earth = self.planets[bodies::EARTH_INDEX].position;
+        let to_earth = earth - self.galactus_position;
+        let dist = to_earth.length();
+        if dist > bodies::GALACTUS.retreat_distance {
+            let step = (bodies::GALACTUS.approach_speed * dt).min(dist - bodies::GALACTUS.retreat_distance);
+            self.galactus_position = self.galactus_position + to_earth.normalize() * step;
+        }
+    }
+
+    /// Un impacto de la nave contra Galactus; `true` si con este repliega
+    /// (y reaparece lejos otra vez, reiniciando el contador de impactos).
+    pub fn register_galactus_hit(&mut self) -> bool {
+        self.galactus_hits += 1;
+        if self.galactus_hits >= bodies::GALACTUS.hits_to_retreat {
+            self.respawn_galactus();
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Nuevo punto de aparición lejos de la Tierra. La dirección usa el
+    /// ángulo áureo sobre un contador creciente: determinista (sin depender
+    /// de ningún generador aleatorio con estado) y bien repartida alrededor
+    /// de la Tierra a lo largo de repliegues sucesivos.
+    fn respawn_galactus(&mut self) {
+        self.galactus_hits = 0;
+        let angle = self.galactus_spawn_index as f32 * 2.399963;
+        self.galactus_spawn_index = self.galactus_spawn_index.wrapping_add(1);
+        let dir = Vec3::new(angle.cos(), 0.2, angle.sin()).normalize();
+        let earth = self.planets[bodies::EARTH_INDEX].position;
+        self.galactus_position = earth + dir * bodies::GALACTUS.spawn_distance;
     }
 
     /// El cuerpo más cercano a `position`, por distancia a su superficie.
@@ -159,6 +218,33 @@ mod tests {
         let earth_radius = bodies::PLANETS[bodies::EARTH_INDEX].radius;
         assert!(position.distance(earth) >= earth_radius + config::SHIP_COLLISION_MARGIN - 1e-3);
         assert!(velocity.dot(position - earth) >= 0.0);
+    }
+
+    #[test]
+    fn galactus_spawns_far_from_earth_and_approaches_it_over_time() {
+        let mut world = World::new();
+        let earth = world.planets[bodies::EARTH_INDEX].position;
+        let start_distance = world.galactus_position.distance(earth);
+        assert!(start_distance > bodies::GALACTUS.retreat_distance + 10.0);
+        for _ in 0..600 {
+            world.update_galactus(1.0 / 60.0);
+        }
+        let later_distance = world.galactus_position.distance(earth);
+        assert!(later_distance < start_distance);
+        assert!(later_distance >= bodies::GALACTUS.retreat_distance - 0.1);
+    }
+
+    #[test]
+    fn enough_hits_make_galactus_retreat_to_a_new_spawn_point() {
+        let mut world = World::new();
+        let first_spawn = world.galactus_position;
+        let mut retreated = false;
+        for _ in 0..bodies::GALACTUS.hits_to_retreat {
+            retreated = world.register_galactus_hit();
+        }
+        assert!(retreated);
+        assert_eq!(world.galactus_hits, 0);
+        assert_ne!(world.galactus_position, first_spawn);
     }
 
     #[test]

@@ -1,6 +1,6 @@
 //! Todos los números ajustables del juego viven aquí.
 
-use crate::engine::math::Vec4;
+use crate::engine::math::{Vec3, Vec4};
 
 pub const WIDTH: usize = 900;
 pub const HEIGHT: usize = 620;
@@ -92,7 +92,7 @@ pub const MANUAL_LINE_SPACING: i32 = 2;
 pub const MANUAL_MARGIN: i32 = 10;
 pub const MANUAL_PADDING: i32 = 8;
 pub const MANUAL_PANEL_COLOR: Vec4 = Vec4::new(0.03, 0.05, 0.09, 0.62);
-pub const MANUAL_TEXT_COLOR: Vec4 = Vec4::new(0.75, 0.95, 1.0, 1.0);
+pub const MANUAL_TEXT_COLOR: Vec4 = HERO_COLOR;
 
 // --- Deformación de malla del Planeta Fragmentado (Fase 5) ---
 /// Nivel de subdivisión del icosaedro por detalle (alto/medio/bajo).
@@ -129,3 +129,57 @@ pub const PERF_MARGIN: i32 = 10;
 pub const PERF_PADDING: i32 = 8;
 pub const PERF_PANEL_COLOR: Vec4 = Vec4::new(0.03, 0.05, 0.09, 0.62);
 pub const PERF_TEXT_COLOR: Vec4 = Vec4::new(0.8, 1.0, 0.8, 1.0);
+
+// --- Dirección artística (Fase 7): cian/blanco para la nave y el HUD,
+// magenta/púrpura reservado para Galactus y cualquier aviso de amenaza. ---
+pub const HERO_COLOR: Vec4 = Vec4::new(0.75, 0.95, 1.0, 1.0);
+pub const THREAT_COLOR: Vec4 = Vec4::new(1.0, 0.35, 0.95, 1.0);
+
+// --- Resplandores baratos en espacio de pantalla (Fase 7): un mismo truco
+// (halo radial semitransparente alrededor de la silueta proyectada) para el
+// brillo del sol y la atmósfera de la Tierra, solo con otro color/escala. ---
+pub const SUN_GLOW_COLOR: Vec3 = Vec3::new(1.0, 0.75, 0.35);
+pub const SUN_GLOW_INTENSITY: f32 = 0.9;
+/// Múltiplo del radio en pantalla del sol que alcanza el halo.
+pub const SUN_GLOW_SCREEN_SCALE: f32 = 2.6;
+pub const EARTH_GLOW_COLOR: Vec3 = Vec3::new(0.35, 0.65, 1.0);
+pub const EARTH_GLOW_INTENSITY: f32 = 0.5;
+pub const EARTH_GLOW_SCREEN_SCALE: f32 = 1.18;
+
+// --- Impulso de warp (`H`, Fase 7): carga progresiva que acelera la nave y
+// estira las estrellas del skybox en estelas de luz. ---
+pub const WARP_RAMP_RESPONSE: f32 = 2.2;
+pub const WARP_SPEED_MULTIPLIER: f32 = 2.6;
+pub const WARP_EXTRA_ACCEL: f32 = 40.0;
+pub const WARP_STREAK_LENGTH_SCALE: f32 = 55.0;
+pub const WARP_STREAK_COLOR: Vec3 = Vec3::new(0.65, 0.9, 1.0);
+
+// --- Galactus: amenaza colosal (Fase 7) ---
+pub const GALACTUS_DEFORM_OCTAVES: u32 = 4;
+pub const GALACTUS_DEFORM_FREQUENCY: f32 = 1.1;
+/// Fracción del radio desplazada por el ruido: más extrema que la del
+/// Planeta Fragmentado, para una silueta rota y amenazante.
+pub const GALACTUS_DEFORM_AMPLITUDE: f32 = 0.32;
+
+// --- Disparo de la nave (`Espacio`, Fase 7) ---
+pub const LASER_SPEED: f32 = 60.0;
+pub const LASER_LIFETIME: f32 = 2.2;
+pub const LASER_COOLDOWN: f32 = 0.14;
+pub const LASER_RADIUS: f32 = 0.09;
+pub const LASER_LENGTH: f32 = 1.6;
+pub const LASER_SPAWN_OFFSET: f32 = 1.1;
+/// Margen sobre el radio de Galactus para contar un impacto.
+pub const LASER_HIT_RADIUS_MARGIN: f32 = 0.6;
+
+// --- HUD: telemetría y mensajes (Fase 7) ---
+pub const TELEMETRY_TEXT_SCALE: i32 = 2;
+pub const TELEMETRY_LINE_SPACING: i32 = 2;
+pub const TELEMETRY_MARGIN: i32 = 10;
+pub const TELEMETRY_PADDING: i32 = 8;
+pub const TELEMETRY_PANEL_COLOR: Vec4 = Vec4::new(0.03, 0.05, 0.09, 0.62);
+
+pub const MESSAGE_TEXT_SCALE: i32 = 2;
+pub const MESSAGE_LINE_SPACING: i32 = 4;
+pub const MESSAGE_MARGIN_BOTTOM: i32 = 14;
+/// Tiempo de vida de un mensaje; también se usa como base del desvanecido lineal.
+pub const MESSAGE_DURATION: f32 = 2.6;

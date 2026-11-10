@@ -119,3 +119,32 @@ pub const MOON: MoonDef = MoonDef {
     rotation_speed: 0.2,
     seed: 71,
 };
+
+/// Galactus: la amenaza colosal de la Fase 7. No orbita el sol; persigue a
+/// la Tierra lentamente y se repliega a un nuevo punto lejano tras recibir
+/// suficientes impactos (ver `world::World::update_galactus`).
+pub struct GalactusDef {
+    pub name: &'static str,
+    pub radius: f32,
+    pub seed: u32,
+    pub rotation_speed: f32,
+    /// Velocidad de acercamiento a la Tierra, unidades/s.
+    pub approach_speed: f32,
+    /// Distancia a la Tierra a la que reaparece tras replegarse.
+    pub spawn_distance: f32,
+    /// Distancia a la Tierra en la que deja de acercarse (y queda como amenaza latente).
+    pub retreat_distance: f32,
+    /// Impactos de la nave necesarios para que se repliegue.
+    pub hits_to_retreat: u32,
+}
+
+pub const GALACTUS: GalactusDef = GalactusDef {
+    name: "Galactus",
+    radius: 10.0,
+    seed: 999,
+    rotation_speed: 0.06,
+    approach_speed: 1.6,
+    spawn_distance: 70.0,
+    retreat_distance: 24.0,
+    hits_to_retreat: 6,
+};

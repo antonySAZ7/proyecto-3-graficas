@@ -63,10 +63,10 @@ Referencia JS: `reference/js/{math,obj,meshes,renderer,shaders,game}.js`. Úsalo
 **Listo cuando:** cada cuerpo se identifica de un vistazo.
 
 ## Fase 7: Estética y combate
-- [ ] Dirección artística: azul/cian/blanco (héroes) contra púrpura/magenta (amenaza); Tierra como foco.
-- [ ] Efectos baratos: brillo del sol, atmósfera fresnel, estelas del warp (`H`).
-- [ ] Galactus como amenaza colosal con shader propio; rayo de la nave (`Espacio`).
-- [ ] HUD claro con fuente bitmap propia: telemetría, objetivo, controles, mensajes. `F1` oculta el HUD.
+- [x] Dirección artística: azul/cian/blanco (héroes) contra púrpura/magenta (amenaza); Tierra como foco.
+- [x] Efectos baratos: brillo del sol, atmósfera fresnel, estelas del warp (`H`).
+- [x] Galactus como amenaza colosal con shader propio; rayo de la nave (`Espacio`).
+- [x] HUD claro con fuente bitmap propia: telemetría, objetivo, controles, mensajes. `F1` oculta el HUD.
 
 **Listo cuando:** una captura de pantalla cualquiera se ve intencional y legible.
 

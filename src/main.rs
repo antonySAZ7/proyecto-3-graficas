@@ -9,22 +9,25 @@ use minifb::{Window, WindowOptions};
 use engine::culling::Frustum;
 use engine::framebuffer::Framebuffer;
 use engine::lod::{self, LodLevel, LodSet};
-use engine::math::{Mat4, Quat, Vec3};
+use engine::math::{Mat4, Quat, Vec3, Vec4};
 use engine::mesh::{self, Mesh};
 use engine::noise::Fbm;
 use engine::obj;
 use engine::rasterizer::RenderQueue;
 use game::bodies::{self, ShaderKind};
 use game::camera::ChaseCamera;
+use game::combat::{Combat, CombatEvent};
 use game::config;
-use game::hud;
+use game::hud::{self, Messages, Telemetry};
 use game::input;
 use game::ship::Ship;
 use game::skybox::Skybox;
 use game::surface;
 use game::world::World;
 use shaders::earth::EarthShader;
+use shaders::galactus::GalactusShader;
 use shaders::ice::IceShader;
+use shaders::laser::LaserShader;
 use shaders::lava::LavaShader;
 use shaders::metal::MetalShader;
 use shaders::moon::MoonShader;
@@ -34,14 +37,15 @@ use shaders::star::StarShader;
 use shaders::surface::SurfaceShader;
 use shaders::{FragmentShader, Uniforms};
 
-/// Malla deformada del Planeta Fragmentado por nivel de detalle: icosaedro
-/// subdividido y desplazado con ruido multioctava (Fase 5), en vez de la
-/// esfera UV que comparten el resto de los cuerpos.
-fn build_fractured_lod(seed: u32) -> LodSet<Mesh> {
+/// Malla deformada por nivel de detalle: icosaedro subdividido y desplazado
+/// con ruido multioctava (Fase 5). La usan tanto el Planeta Fragmentado como
+/// Galactus (Fase 7), cada uno con su propia frecuencia/amplitud de ruido,
+/// en vez de la esfera UV que comparten el resto de los cuerpos.
+fn build_fractured_lod(seed: u32, octaves: u32, frequency: f32, amplitude: f32) -> LodSet<Mesh> {
     let build = |subdivisions: u32| {
         let mut m = mesh::icosphere(subdivisions);
-        let noise = Fbm::new(seed).set_octaves(config::FRACTURED_DEFORM_OCTAVES).set_frequency(config::FRACTURED_DEFORM_FREQUENCY);
-        mesh::displace(&mut m, |dir| 1.0 + noise.sample3(dir) * config::FRACTURED_DEFORM_AMPLITUDE);
+        let noise = Fbm::new(seed).set_octaves(octaves).set_frequency(frequency);
+        mesh::displace(&mut m, |dir| 1.0 + noise.sample3(dir) * amplitude);
         m
     };
     LodSet::new(
@@ -49,6 +53,75 @@ fn build_fractured_lod(seed: u32) -> LodSet<Mesh> {
         build(config::FRACTURED_ICOSPHERE_SUBDIV_MEDIUM),
         build(config::FRACTURED_ICOSPHERE_SUBDIV_LOW),
     )
+}
+
+/// Proyecta un punto del mundo a espacio de pantalla; `None` si queda detrás
+/// de la cámara. Devuelve también la profundidad NDC, para comparar contra
+/// el z-buffer ya escrito por la escena.
+fn project_to_screen(view_proj: Mat4, width: f32, height: f32, p: Vec3) -> Option<(f32, f32, f32)> {
+    let clip = view_proj * p.extend(1.0);
+    if clip.w <= 0.0001 {
+        return None;
+    }
+    let inv_w = 1.0 / clip.w;
+    let ndc_x = clip.x * inv_w;
+    let ndc_y = clip.y * inv_w;
+    let ndc_z = clip.z * inv_w;
+    Some(((ndc_x * 0.5 + 0.5) * width, (1.0 - (ndc_y * 0.5 + 0.5)) * height, ndc_z))
+}
+
+/// Halo radial barato en espacio de pantalla (Fase 7): un mismo truco para
+/// el brillo del sol y la atmósfera de la Tierra, solo cambiando color,
+/// intensidad y cuánto se extiende más allá del disco real. No pinta donde
+/// ya hay algo dibujado más cerca que el cuerpo (para no tapar lo que pasa
+/// por delante), así que el halo solo se ve alrededor de la silueta real.
+#[allow(clippy::too_many_arguments)]
+fn draw_glow(
+    fb: &mut Framebuffer,
+    view_proj: Mat4,
+    center: Vec3,
+    cam_right: Vec3,
+    body_radius: f32,
+    color: Vec3,
+    intensity: f32,
+    screen_scale: f32,
+) {
+    let width = fb.width as f32;
+    let height = fb.height as f32;
+    let Some((cx, cy, cz)) = project_to_screen(view_proj, width, height, center) else { return };
+    let Some((ex, ey, _)) = project_to_screen(view_proj, width, height, center + cam_right * body_radius) else { return };
+    let glow_radius = (ex - cx).hypot(ey - cy) * screen_scale;
+    if !glow_radius.is_finite() || glow_radius < 1.0 {
+        return;
+    }
+
+    let min_x = (cx - glow_radius).floor().max(0.0) as i32;
+    let max_x = (cx + glow_radius).ceil().min(width - 1.0) as i32;
+    let min_y = (cy - glow_radius).floor().max(0.0) as i32;
+    let max_y = (cy + glow_radius).ceil().min(height - 1.0) as i32;
+    if min_x > max_x || min_y > max_y {
+        return;
+    }
+
+    for y in min_y..=max_y {
+        for x in min_x..=max_x {
+            let dx = x as f32 + 0.5 - cx;
+            let dy = y as f32 + 0.5 - cy;
+            let d = (dx * dx + dy * dy).sqrt() / glow_radius;
+            if d >= 1.0 {
+                continue;
+            }
+            // Ocluido por algo ya dibujado más cerca que el cuerpo: sin halo ahí.
+            if fb.depth_at(x as usize, y as usize) < cz - 0.0005 {
+                continue;
+            }
+            let alpha = ((1.0 - d).powf(2.0) * intensity).clamp(0.0, 1.0);
+            if alpha <= 0.002 {
+                continue;
+            }
+            fb.blend_pixel(x as usize, y as usize, cz, Vec4::new(color.x, color.y, color.z, alpha));
+        }
+    }
 }
 
 /// Shader de superficie según el tipo de dato de `bodies.rs`; construido una
@@ -95,14 +168,47 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let planet_shaders: Vec<Box<dyn FragmentShader>> = bodies::PLANETS.iter().map(build_planet_shader).collect();
     // Solo el Planeta Fragmentado (`fractured: true` en bodies.rs) usa una
     // malla propia deformada; el resto comparte `sphere_lod` (dato, no `if`).
-    let planet_lods: Vec<Option<LodSet<Mesh>>> =
-        bodies::PLANETS.iter().map(|def| if def.fractured { Some(build_fractured_lod(def.seed)) } else { None }).collect();
+    let planet_lods: Vec<Option<LodSet<Mesh>>> = bodies::PLANETS
+        .iter()
+        .map(|def| {
+            if def.fractured {
+                Some(build_fractured_lod(
+                    def.seed,
+                    config::FRACTURED_DEFORM_OCTAVES,
+                    config::FRACTURED_DEFORM_FREQUENCY,
+                    config::FRACTURED_DEFORM_AMPLITUDE,
+                ))
+            } else {
+                None
+            }
+        })
+        .collect();
 
     let surface_models = surface::build_models(config::SURFACE_MODEL_SEED);
     let surface_shaders: Vec<SurfaceShader> = surface::KINDS.iter().map(|&kind| SurfaceShader::for_kind(kind)).collect();
     let surface_instances = surface::scatter(config::SURFACE_SCATTER_SEED, config::SURFACE_SCATTER_COUNT);
 
     let skybox = Skybox::new(config::STARFIELD_SEED, config::STARFIELD_COUNT);
+
+    // Galactus (Fase 7): malla propia deformada igual que el Planeta
+    // Fragmentado, pero con su propia frecuencia/amplitud (grietas más
+    // extremas) y su shader de amenaza.
+    let galactus_lod = build_fractured_lod(
+        bodies::GALACTUS.seed,
+        config::GALACTUS_DEFORM_OCTAVES,
+        config::GALACTUS_DEFORM_FREQUENCY,
+        config::GALACTUS_DEFORM_AMPLITUDE,
+    );
+    let galactus_shader = GalactusShader::new(bodies::GALACTUS.seed);
+
+    // Rayo de la nave (Fase 7): malla reutilizada entre todos los disparos,
+    // solo cambia la matriz de modelo por proyectil.
+    let laser_mesh = mesh::cylinder(6, config::LASER_RADIUS, config::LASER_LENGTH);
+    let laser_shader = LaserShader::new(config::LASER_RADIUS);
+    let mut combat = Combat::new();
+    let mut messages = Messages::new();
+    let mut last_collision_notified: Option<&'static str> = None;
+    let mut was_warping = false;
 
     let mut world = World::new();
     let spawn_point = |world: &World| {
@@ -116,7 +222,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut elapsed = 0.0f32;
     let mut title_timer = 0.0f32;
     let mut paused = false;
-    let mut show_manual = true;
+    // `F1` oculta todo el HUD del jugador (manual, telemetría, mensajes); el
+    // panel de rendimiento queda aparte porque es una herramienta de
+    // depuración, no parte de la dirección artística del juego.
+    let mut show_hud = true;
     // Depuración de rendimiento (Fase 4): comparar con F2/F3 el efecto real
     // del descarte por frustum y del LOD.
     let mut frustum_culling_enabled = true;
@@ -143,7 +252,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             paused = !paused;
         }
         if input_state.toggle_manual {
-            show_manual = !show_manual;
+            show_hud = !show_hud;
         }
         if input_state.toggle_frustum_culling {
             frustum_culling_enabled = !frustum_culling_enabled;
@@ -155,8 +264,34 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if !paused {
             elapsed += dt;
             world.update(elapsed);
+            world.update_galactus(dt);
             ship.update(&input_state, &world, dt);
             camera.update(&ship, dt);
+
+            for event in combat.update(input_state.fire, &ship, &mut world, dt) {
+                match event {
+                    CombatEvent::Fired => {}
+                    CombatEvent::Hit => messages.push("IMPACTO EN GALACTUS", config::HERO_COLOR),
+                    CombatEvent::Retreated => messages.push("GALACTUS SE REPLIEGA", config::THREAT_COLOR),
+                }
+            }
+
+            // Mensaje solo al entrar en colisión con un cuerpo nuevo, no en
+            // cada frame mientras se sigue tocando (evita spam en pantalla).
+            if ship.last_collision != last_collision_notified {
+                if let Some(name) = ship.last_collision {
+                    messages.push(format!("COLISION: {}", name.to_uppercase()), config::THREAT_COLOR);
+                }
+            }
+            last_collision_notified = ship.last_collision;
+
+            let is_warping = ship.warp_charge > 0.5;
+            if is_warping && !was_warping {
+                messages.push("IMPULSO DE WARP", config::HERO_COLOR);
+            }
+            was_warping = is_warping;
+
+            messages.update(dt);
         }
 
         let view_proj = proj * camera.view();
@@ -183,7 +318,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         };
 
         fb.clear(config::BACKGROUND_COLOR);
-        skybox.draw(&mut fb, skybox_view_proj);
+        skybox.draw(&mut fb, skybox_view_proj, ship.warp_charge);
 
         render_queue.clear();
 
@@ -209,6 +344,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             render_queue.push_mesh(sphere_lod.get(level), moon_model, view_proj, eye, &moon_shader, (config::WIDTH, config::HEIGHT));
         }
 
+        if let Some(level) = visible_lod(world.galactus_position, bodies::GALACTUS.radius) {
+            let galactus_model = Mat4::from_translation(world.galactus_position)
+                * Quat::from_axis_angle(Vec3::Y, world.galactus_rotation).to_mat4()
+                * Mat4::from_scale(Vec3::splat(bodies::GALACTUS.radius));
+            render_queue.push_mesh(galactus_lod.get(level), galactus_model, view_proj, eye, &galactus_shader, (config::WIDTH, config::HEIGHT));
+        }
+
         // Objetos de superficie de la Tierra (Fase 5): solo de cerca, cada
         // uno con su propio descarte por frustum (no tienen niveles de LOD).
         let earth = &world.planets[bodies::EARTH_INDEX];
@@ -231,10 +373,63 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ship_model = Mat4::from_translation(ship.position) * ship.orientation.to_mat4() * Mat4::from_scale(Vec3::splat(0.58));
         render_queue.push_mesh(&ship_mesh, ship_model, view_proj, eye, &ship_shader, (config::WIDTH, config::HEIGHT));
 
+        // Rayos en vuelo (Fase 7): el cilindro va de la posición actual hacia
+        // atrás, orientado con `align_y_to_normal` a lo largo de su dirección.
+        for laser in &combat.lasers {
+            let center = laser.position - laser.direction * (config::LASER_LENGTH * 0.5);
+            let laser_model = Mat4::align_y_to_normal(laser.direction, center);
+            render_queue.push_mesh(&laser_mesh, laser_model, view_proj, eye, &laser_shader, (config::WIDTH, config::HEIGHT));
+        }
+
         render_queue.rasterize_parallel(&mut fb, &uniforms, config::RENDER_BAND_ROWS);
 
-        if show_manual {
+        // Resplandores baratos en espacio de pantalla (Fase 7): brillo del
+        // sol y atmósfera de la Tierra, el mismo truco con otro color/escala.
+        let cam_forward = (camera.look_at - camera.position).normalize();
+        let cam_right = cam_forward.cross(camera.up).normalize();
+        draw_glow(
+            &mut fb,
+            view_proj,
+            world.sun_position,
+            cam_right,
+            bodies::SUN_RADIUS,
+            config::SUN_GLOW_COLOR,
+            config::SUN_GLOW_INTENSITY,
+            config::SUN_GLOW_SCREEN_SCALE,
+        );
+        draw_glow(
+            &mut fb,
+            view_proj,
+            earth.position,
+            cam_right,
+            earth.def.radius,
+            config::EARTH_GLOW_COLOR,
+            config::EARTH_GLOW_INTENSITY,
+            config::EARTH_GLOW_SCREEN_SCALE,
+        );
+
+        if show_hud {
             hud::draw_controls_manual(&mut fb);
+
+            let nearest = world.nearest_body(ship.position);
+            let target_dir = ship.direction_to_target(&world);
+            let bearing = target_dir.dot(ship.right()).atan2(target_dir.dot(ship.forward())).to_degrees();
+            hud::draw_telemetry_panel(
+                &mut fb,
+                &Telemetry {
+                    speed: ship.speed,
+                    cruise: ship.cruise_enabled,
+                    stabilize: ship.stabilize_assist,
+                    orbit: ship.orbit_assist,
+                    warp_charge: ship.warp_charge,
+                    target_name: nearest.name,
+                    target_distance: nearest.surface_distance.max(0.0),
+                    target_bearing_deg: bearing,
+                    target_is_threat: nearest.name == bodies::GALACTUS.name,
+                },
+            );
+
+            messages.draw(&mut fb);
         }
         hud::draw_performance_panel(
             &mut fb,
@@ -254,19 +449,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         title_timer += dt;
         if title_timer > 0.2 {
             title_timer = 0.0;
-            // Indicador de dirección al objetivo: rumbo relativo en grados al
-            // cuerpo celeste más cercano (0 = de frente, negativo = a la izquierda).
-            let target_dir = ship.direction_to_target(&world);
-            let bearing = target_dir.dot(ship.right()).atan2(target_dir.dot(ship.forward())).to_degrees();
             window.set_title(&format!(
-                "Fantasticar | vel {:>5.1} u/s | rumbo {:>4.0} deg | crucero {} | estabilizacion {} | orbita {} | {}{}",
-                ship.speed,
-                bearing,
-                if ship.cruise_enabled { "ON" } else { "off" },
-                if ship.stabilize_assist { "ON" } else { "off" },
-                if ship.orbit_assist { "ON" } else { "off" },
-                if paused { "PAUSADO | " } else { "" },
-                "F1 manual",
+                "Fantasticar: Defensa de la Tierra{}",
+                if paused { " | PAUSADO" } else { "" },
             ));
         }
     }

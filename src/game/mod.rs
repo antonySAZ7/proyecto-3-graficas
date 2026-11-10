@@ -1,5 +1,6 @@
 pub mod bodies;
 pub mod camera;
+pub mod combat;
 pub mod config;
 pub mod hud;
 pub mod input;
