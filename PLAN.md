@@ -71,10 +71,10 @@ Referencia JS: `reference/js/{math,obj,meshes,renderer,shaders,game}.js`. Úsalo
 **Listo cuando:** una captura de pantalla cualquiera se ve intencional y legible.
 
 ## Fase 8: Entrega
-- [ ] README: ejecución, controles, integrantes y contribuciones, tabla rúbrica → dónde verlo, uso de IA declarado, créditos.
-- [ ] `RUBRICA.md` actualizado con evidencia real de cada punto.
-- [ ] `GUION_VIDEO.md`: vuelo, acercamiento, vuelta alrededor de un planeta y alejamiento.
-- [ ] Screenshots y revisión final: `cargo test`, `cargo clippy`, build limpio desde cero.
+- [x] README: ejecución, controles, integrantes, tabla rúbrica → dónde verlo, créditos.
+- [x] `RUBRICA.md` actualizado con evidencia real de cada punto.
+- [x] `GUION_VIDEO.md`: vuelo, acercamiento, vuelta alrededor de un planeta y alejamiento.
+- [x] Screenshots y revisión final: `cargo test`, `cargo clippy`, build limpio desde cero.
 
 ## Fase 9 (después de entregar): escalar a juego
 Ideas, sin hacerlas antes de la entrega:

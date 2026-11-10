@@ -1,47 +1,19 @@
 # Fantasticar: Defensa de la Tierra
 
-Proyecto final de Gráficas por Computadora (UVG): sistema solar explorable
-con nave, renderer 3D por software propio en Rust. Plan de desarrollo por
-fases y checklist de rúbrica en [`PLAN.md`](PLAN.md).
+Proyecto final de Gráficas por Computadora (UVG): sistema solar explorable con
+nave, renderer 3D **por software propio** en Rust. Sin motor de juego, sin
+funciones 3D/cámara/materiales de GPU: toda la matemática, el pipeline de
+rasterización, el z-buffer y los shaders de fragmento son código propio. Las
+únicas libs externas son [`minifb`](https://crates.io/crates/minifb) (ventana
+e input) y [`rayon`](https://crates.io/crates/rayon) (paralelismo por bandas).
 
-**Estado actual (Fase 0):** base del lab de shaders reorganizada según la
-arquitectura de [`CLAUDE.md`](CLAUDE.md) (`engine/`, `shaders/`, `game/`).
-Software renderer en Rust: pipeline propio de
-transformación de vértices, rasterización con z-buffer y shaders por
-fragmento, mostrado en una ventana con [`minifb`](https://crates.io/crates/minifb).
-No se usa ninguna textura ni material: todo el color sale de funciones de
-shader que combinan ruido procedural, iluminación e interpolación de
-atributos.
+Puerto y evolución del proyecto original en JavaScript, conservado en
+`reference/js/` solo como referencia de comportamiento (no se compila).
 
-## Cuerpos
+## Integrantes
 
-- **Estrella (sol):** 5 capas — gradiente base núcleo/borde, turbulencia de
-  plasma animada (ruido fbm), manchas solares (ruido umbralizado), limb
-  darkening según el ángulo de vista, y un pulso de brillo en el tiempo.
-- **Planeta rocoso:** 5 capas — color por elevación (tierras bajas/medias/
-  altas), cráteres (ruido umbralizado), casquetes polares de hielo,
-  iluminación Lambertiana + ambiente, y brillo atmosférico delgado (fresnel).
-- **Gigante gaseoso:** 4 capas — bandas de latitud deformadas y animadas
-  (nubes fluyendo con el tiempo), una tormenta/vórtice localizado, iluminación
-  Lambertiana, y una bruma atmosférica gruesa (fresnel).
-- **Anillos:** geometría separada (un anillo/disco), 4 capas — gradiente
-  radial, bandas de densidad + grano (que también controlan la
-  transparencia, simulando huecos), iluminación sobre el plano del anillo, y
-  la sombra que el planeta proyecta sobre el anillo (test analítico
-  esfera/rayo de luz).
-- **Luna:** geometría separada (otra esfera), 4 capas — variación de albedo
-  (mares oscuros vs. tierras altas), cráteres densos con reborde, iluminación
-  Lambertiana de terminador duro (sin atmósfera), y oscurecimiento sutil del
-  borde.
-
-## Controles
-
-- `1` — ver la estrella
-- `2` — ver el planeta rocoso con su luna
-- `3` — ver el gigante gaseoso con sus anillos
-- `Esc` — salir
-
-La cámara es fija en las tres escenas.
+- Mariana Castañeda
+- Antony Saz
 
 ## Cómo correr
 
@@ -49,33 +21,119 @@ La cámara es fija en las tres escenas.
 cargo run --release
 ```
 
-## Capturas
+El perfil `release` (`opt-level = 3`, LTO, `codegen-units = 1`) es necesario
+para mantener 60 FPS; en modo debug el renderizador por software va notoriamente
+más lento. Resolución interna y demás números ajustables viven en
+[`src/game/config.rs`](src/game/config.rs).
 
-**Estrella**
+```
+cargo test     # matemática, OBJ, ruido, culling, colisión, física, HUD...
+cargo clippy   # sin warnings
+```
 
-![Estrella](screenshots/01_estrella.png)
+## Controles
 
-**Planeta rocoso con su luna**
+| Tecla | Acción |
+|---|---|
+| `↑/↓` | Cabeceo |
+| `←/→` | Guiñada (giro) |
+| `A` / `D` | Alabeo |
+| `W` / `S` | Acelerar / frenar |
+| `SHIFT` | Turbo |
+| `C` | Velocidad crucero (mantiene la velocidad sin mantener `W`) |
+| `Z` | Asistencia de estabilización (nivela el alabeo) |
+| `O` | Asistencia de órbita (rodea el cuerpo más cercano sin estrellarse) |
+| `H` | Warp (impulso extra con estelas animadas en el skybox) |
+| `Espacio` | Disparo (rayo contra Galactus) |
+| `R` | Reiniciar nave |
+| `P` | Pausa |
+| `F1` | Mostrar/ocultar todo el HUD |
+| `F2` | Comparar frustum culling encendido/apagado |
+| `F3` | Forzar LOD máximo (comparar contra el LOD normal) |
+| `Esc` | Salir |
 
-![Planeta rocoso con luna](screenshots/02_rocoso_con_luna.png)
+La tabla de teclas es una sola fuente de verdad en
+[`src/game/input.rs`](src/game/input.rs): remapear una tecla es editar esa
+lista, y el manual en pantalla (`F1`) se genera a partir de ella, así que
+nunca queda desincronizado.
 
-**Gigante gaseoso con anillos**
+## Qué hay en el sistema solar
 
-![Gigante gaseoso con anillos](screenshots/03_gigante_gaseoso_con_anillos.png)
+Sol + 5 planetas (datos en [`src/game/bodies.rs`](src/game/bodies.rs), todos
+orbitan y rotan por tiempo transcurrido, no por frames):
+
+| Cuerpo | Identidad visual | Shader |
+|---|---|---|
+| Tierra | océanos, continentes, nubes animadas, mapeo de normales de terreno | `shaders/earth.rs` |
+| Mundo Forja | lava fluyendo, grietas incandescentes animadas | `shaders/lava.rs` |
+| Niflheim | hielo agrietado, frío | `shaders/ice.rs` |
+| Planeta Fragmentado | malla deformada por ruido multioctava (geometría rota, no solo color) | `shaders/rocky.rs` |
+| Mundo de Plata | metal con circuitos animados | `shaders/metal.rs` |
+| Luna | orbita la Tierra, cráteres | `shaders/moon.rs` |
+| Sol | plasma turbulento animado, manchas, resplandor | `shaders/star.rs` |
+| Galactus | amenaza colosal, malla deformada, persigue a la Tierra | `shaders/galactus.rs` |
+
+Sobre la Tierra hay 4 tipos de modelo propio (árbol cristalino, roca, torre,
+baliza) distribuidos proceduralmente con semilla fija
+(`SURFACE_SCATTER_SEED` en `config.rs`), orientados a la normal de la
+superficie mientras el planeta rota.
+
+## Navegación
+
+- Aceleración, frenado y giro progresivos, independientes del framerate
+  (todo integra con delta time, acotado por frame).
+- Gravedad por inversa del cuadrado hacia los cuerpos cercanos y colisión
+  esférica (la nave no atraviesa planetas: se detiene en el radio + margen
+  de seguridad).
+- `O` activa un modo de órbita asistida: mantiene una distancia estable al
+  cuerpo más cercano para rodearlo sin estrellarse ni cambiar de escena.
+- El límite de velocidad baja cerca de un cuerpo, para poder maniobrar en
+  superficie sin perder el control.
+
+## Rendimiento
+
+- Rasterización paralela por bandas de framebuffer con `rayon`; buffers
+  reutilizados entre frames (sin asignaciones por píxel).
+- Frustum culling por esfera y LOD de 3 niveles por distancia, siempre
+  activos; `F2`/`F3` los comparan en vivo contra "sin optimizar" y el HUD de
+  rendimiento (esquina superior izquierda) muestra FPS, triángulos
+  procesados/descartados y objetos visibles/descartados en tiempo real.
 
 ## Estructura del código
 
-- `src/engine/framebuffer.rs` — buffer de píxeles + z-buffer, con mezcla
-  alfa para los anillos.
-- `src/engine/mesh.rs` — generación de la esfera (UV sphere) y del anillo
-  (annulus plano); ambas geometrías son independientes y reutilizables.
-- `src/engine/rasterizer.rs` — pipeline de rasterización: transformación
-  objeto→mundo→clip→NDC→pantalla, interpolación con corrección de
-  perspectiva, backface culling y prueba de profundidad.
-- `src/shaders/mod.rs` — trait `FragmentShader` y los `Uniforms` (tiempo,
-  dirección de luz) compartidos por todos los shaders.
-- `src/shaders/*.rs` — un shader por cuerpo celeste (estrella, rocoso,
-  gigante gaseoso, anillos, luna).
-- `src/game/config.rs` — números ajustables (resolución, cámara, geometría).
-- `src/main.rs` — ventana, cámara fija, construcción de las 3 escenas y el
-  manejo de teclas.
+Ver [`CLAUDE.md`](CLAUDE.md) para la arquitectura completa y las reglas del
+proyecto. Resumen:
+
+```
+src/
+  main.rs       ventana, bucle principal, delta time
+  engine/       motor reutilizable (no depende de game/): math, framebuffer,
+                rasterizer, mesh, obj, noise, culling, lod, font, rng
+  shaders/      un archivo por shader; trait FragmentShader en mod.rs
+  game/         config, cuerpos celestes como datos, nave, cámara, física,
+                input, mundo, superficie, combate, HUD
+```
+
+## Capturas
+
+![Nave cerca de la Tierra, con el HUD completo](screenshots/01_tierra_nave_hud.png)
+
+## Rúbrica
+
+Matriz completa de los 200 puntos posibles, con evidencia de dónde ver cada
+característica durante la demo: [`reference/RUBRICA.md`](reference/RUBRICA.md).
+
+## Guion del video de entrega
+
+[`GUION_VIDEO.md`](GUION_VIDEO.md).
+
+## Créditos
+
+- Proyecto final del curso de Gráficas por Computadora, Universidad del
+  Valle de Guatemala (UVG).
+- Geometría de la nave (`assets/models/fantasticar.obj`) y todo el arte
+  procedural (shaders, ruido, distribución de superficie) son originales del
+  equipo; no se usa ninguna textura ni modelo externo.
+- Ambientado libremente en la mitología de Fantastic Four / Galactus, solo
+  como inspiración temática para la dirección de arte (sin usar ningún
+  asset con derechos de autor de terceros).

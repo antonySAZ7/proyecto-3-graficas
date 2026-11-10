@@ -6,7 +6,6 @@ pub mod lava;
 pub mod laser;
 pub mod ice;
 pub mod metal;
-pub mod rings;
 pub mod moon;
 pub mod ship;
 pub mod surface;
@@ -25,6 +24,10 @@ pub fn spherical_uv(p: Vec3) -> (f32, f32) {
 
 /// Datos que recibe un shader sobre el punto que va a colorear.
 pub struct FragInput {
+    /// Posición en espacio de mundo; ningún shader activo la lee hoy (las
+    /// sombras entre cuerpos eran de `rings.rs`, retirado), pero es la
+    /// entrada natural para ese tipo de efecto entre cuerpos.
+    #[allow(dead_code)]
     pub world_pos: Vec3,
     /// Posición en espacio de objeto, para que el ruido no dependa de la escala/posición del cuerpo.
     pub local: Vec3,

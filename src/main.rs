@@ -278,10 +278,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             // Mensaje solo al entrar en colisión con un cuerpo nuevo, no en
             // cada frame mientras se sigue tocando (evita spam en pantalla).
-            if ship.last_collision != last_collision_notified {
-                if let Some(name) = ship.last_collision {
-                    messages.push(format!("COLISION: {}", name.to_uppercase()), config::THREAT_COLOR);
-                }
+            if ship.last_collision != last_collision_notified
+                && let Some(name) = ship.last_collision
+            {
+                messages.push(format!("COLISION: {}", name.to_uppercase()), config::THREAT_COLOR);
             }
             last_collision_notified = ship.last_collision;
 

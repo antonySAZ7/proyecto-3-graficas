@@ -199,6 +199,9 @@ impl Mat4 {
     }
 
     /// Inversa general por eliminación Gauss-Jordan con pivoteo parcial.
+    /// Los índices son el algoritmo en sí (pivote, fila, columna aumentada);
+    /// forzarlo a iteradores lo haría menos legible.
+    #[allow(clippy::needless_range_loop)]
     pub fn inverse(&self) -> Mat4 {
         let mut a = [[0f32; 8]; 4];
         for r in 0..4 {
@@ -322,6 +325,8 @@ impl Quat {
         }
     }
 
+    /// Parte del API de cuaterniones; hoy solo la ejercita el round-trip de prueba.
+    #[allow(dead_code)]
     pub fn conjugate(self) -> Quat {
         Quat { x: -self.x, y: -self.y, z: -self.z, w: self.w }
     }

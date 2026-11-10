@@ -46,31 +46,6 @@ pub fn sphere(stacks: u32, slices: u32) -> Mesh {
 }
 
 /// Anillo plano en el plano XZ (normal hacia +Y), usado para los anillos del planeta.
-pub fn ring(inner: f32, outer: f32, segments: u32) -> Mesh {
-    let mut vertices = Vec::with_capacity(((segments + 1) * 2) as usize);
-    for j in 0..=segments {
-        let u = j as f32 / segments as f32;
-        let phi = u * std::f32::consts::TAU;
-        let (s, c) = phi.sin_cos();
-        let inner_pos = Vec3::new(inner * c, 0.0, inner * s);
-        let outer_pos = Vec3::new(outer * c, 0.0, outer * s);
-        vertices.push(Vertex { position: inner_pos, normal: Vec3::Y });
-        vertices.push(Vertex { position: outer_pos, normal: Vec3::Y });
-    }
-
-    let mut indices = Vec::with_capacity((segments * 2) as usize);
-    for j in 0..segments {
-        let i0 = j * 2;
-        let i1 = i0 + 1;
-        let i2 = i0 + 2;
-        let i3 = i0 + 3;
-        indices.push([i0, i2, i1]);
-        indices.push([i1, i2, i3]);
-    }
-
-    Mesh { vertices, indices }
-}
-
 /// Cilindro centrado en el origen, eje Y, con tapas. Usado para troncos,
 /// torres y postes de los modelos de superficie (Fase 5).
 pub fn cylinder(segments: u32, radius: f32, height: f32) -> Mesh {

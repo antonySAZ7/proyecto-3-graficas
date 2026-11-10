@@ -21,12 +21,6 @@ pub const SPHERE_SLICES_LOW: u32 = 12;
 pub const LOD_MEDIUM_RATIO: f32 = 9.0;
 pub const LOD_LOW_RATIO: f32 = 22.0;
 
-pub const RING_INNER_RADIUS: f32 = 1.7;
-pub const RING_OUTER_RADIUS: f32 = 2.7;
-pub const RING_SEGMENTS: u32 = 128;
-
-pub const GAS_GIANT_RADIUS: f32 = 1.2;
-
 pub const BACKGROUND_COLOR: u32 = 0x05070d;
 
 // --- Nave: giro y aceleración (Fase 2) ---
