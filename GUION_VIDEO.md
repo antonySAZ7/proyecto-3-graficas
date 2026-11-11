@@ -27,8 +27,8 @@ animación pregrabada.
    que los 5 son distinguibles entre sí.
 7. **1:15-1:28 — Galactus.** Volar hacia Galactus, mantener `Espacio` para
    disparar y mostrar los impactos y el mensaje de repliegue.
-8. **1:28-1:30 — Cierre.** Mostrar brevemente `reference/RUBRICA.md` o el
-   repositorio.
+8. **1:28-1:30 — Cierre.** Mostrar brevemente el repositorio y recordar que
+   todo el render se ejecuta por software en CPU.
 
 Practicar el recorrido una vez antes de grabar. Si el equipo no sostiene 60
 FPS, bajar `WIDTH`/`HEIGHT` en `src/game/config.rs` y volver a compilar en

@@ -7,9 +7,6 @@ rasterización, el z-buffer y los shaders de fragmento son código propio. Las
 únicas libs externas son [`minifb`](https://crates.io/crates/minifb) (ventana
 e input) y [`rayon`](https://crates.io/crates/rayon) (paralelismo por bandas).
 
-Puerto y evolución del proyecto original en JavaScript, conservado en
-`reference/js/` solo como referencia de comportamiento (no se compila).
-
 ## Integrantes
 
 - Mariana Castañeda
@@ -44,7 +41,7 @@ cargo clippy   # sin warnings
 | `Z` | Asistencia de estabilización (nivela el alabeo) |
 | `O` | Asistencia de órbita (rodea el cuerpo más cercano sin estrellarse) |
 | `H` | Warp (impulso extra con estelas animadas en el skybox) |
-| `Espacio` | Disparo (rayo contra Galactus) |
+| `Espacio` | Disparo (proyectil de fuego contra Galactus) |
 | `R` | Reiniciar nave |
 | `P` | Pausa |
 | `F1` | Mostrar/ocultar todo el HUD |
@@ -101,8 +98,7 @@ superficie mientras el planeta rota.
 
 ## Estructura del código
 
-Ver [`CLAUDE.md`](CLAUDE.md) para la arquitectura completa y las reglas del
-proyecto. Resumen:
+Arquitectura principal:
 
 ```
 src/
@@ -120,8 +116,9 @@ src/
 
 ## Rúbrica
 
-Matriz completa de los 200 puntos posibles, con evidencia de dónde ver cada
-característica durante la demo: [`reference/RUBRICA.md`](reference/RUBRICA.md).
+Las características evaluables y su evidencia están descritas en las secciones
+anteriores. El HUD muestra FPS, triángulos, objetos visibles, culling y LOD para
+facilitar su verificación durante la demostración.
 
 ## Guion del video de entrega
 
@@ -137,3 +134,6 @@ característica durante la demo: [`reference/RUBRICA.md`](reference/RUBRICA.md).
 - Ambientado libremente en la mitología de Fantastic Four / Galactus, solo
   como inspiración temática para la dirección de arte (sin usar ningún
   asset con derechos de autor de terceros).
+- Se utilizó asistencia de IA como apoyo durante la programación y la
+  documentación. El equipo revisó el resultado y debe poder explicar y
+  modificar el código durante la evaluación.

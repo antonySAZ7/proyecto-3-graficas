@@ -1,5 +1,5 @@
 //! Cuerpos celestes del sistema solar, definidos como datos: agregar un
-//! planeta es agregar una entrada aquí, sin tocar lógica (ver CLAUDE.md).
+//! planeta es agregar una entrada aquí, sin tocar la lógica del mundo.
 
 /// Qué shader de superficie usa cada planeta. El sol y la luna no están aquí
 /// porque no comparten su tipo con ningún planeta.
