@@ -8,6 +8,70 @@ use crate::engine::math::Vec4;
 use crate::game::config;
 use crate::game::input::{self, MANUAL};
 
+pub struct EnemyIndicator {
+    /// Dirección en espacio de pantalla desde el centro hacia el enemigo.
+    pub x: f32,
+    pub y: f32,
+    /// `true` si el centro de Galactus ya está dentro del framebuffer.
+    pub visible: bool,
+}
+
+/// Nombre y barra de salud siempre visibles arriba al centro. Si Galactus
+/// sale de la pantalla, una flecha se ancla al borde en su dirección.
+pub fn draw_enemy_status(fb: &mut Framebuffer, health: u32, max_health: u32, indicator: EnemyIndicator) {
+    let label = format!("GALACTUS {health}/{max_health}");
+    let label_w = font::text_width(&label, config::ENEMY_HUD_TEXT_SCALE);
+    let label_x = (fb.width as i32 - label_w) / 2;
+    let label_y = config::ENEMY_HUD_MARGIN_TOP;
+    font::draw_text(fb, label_x, label_y, &label, config::ENEMY_HUD_TEXT_SCALE, config::THREAT_COLOR);
+
+    let bar_x = (fb.width as i32 - config::ENEMY_HUD_BAR_WIDTH) / 2;
+    let bar_y = label_y + font::GLYPH_HEIGHT as i32 * config::ENEMY_HUD_TEXT_SCALE + 5;
+    font::draw_panel(
+        fb,
+        bar_x - 2,
+        bar_y - 2,
+        config::ENEMY_HUD_BAR_WIDTH + 4,
+        config::ENEMY_HUD_BAR_HEIGHT + 4,
+        Vec4::new(0.08, 0.015, 0.09, 0.88),
+    );
+    let ratio = if max_health == 0 { 0.0 } else { health as f32 / max_health as f32 };
+    let fill = (config::ENEMY_HUD_BAR_WIDTH as f32 * ratio.clamp(0.0, 1.0)).round() as i32;
+    if fill > 0 {
+        font::draw_panel(fb, bar_x, bar_y, fill, config::ENEMY_HUD_BAR_HEIGHT, config::THREAT_COLOR);
+    }
+
+    if indicator.visible {
+        return;
+    }
+    let mut dx = indicator.x;
+    let mut dy = indicator.y;
+    let length = (dx * dx + dy * dy).sqrt();
+    if length < 1e-4 {
+        dx = 0.0;
+        dy = 1.0;
+    } else {
+        dx /= length;
+        dy /= length;
+    }
+    let half_w = fb.width as f32 * 0.5 - config::ENEMY_HUD_EDGE_MARGIN;
+    let half_h = fb.height as f32 * 0.5 - config::ENEMY_HUD_EDGE_MARGIN;
+    let tx = if dx.abs() > 1e-4 { half_w / dx.abs() } else { f32::INFINITY };
+    let ty = if dy.abs() > 1e-4 { half_h / dy.abs() } else { f32::INFINITY };
+    let distance = tx.min(ty);
+    let x = (fb.width as f32 * 0.5 + dx * distance) as i32;
+    let y = (fb.height as f32 * 0.5 + dy * distance) as i32;
+    let arrow = if dx.abs() > dy.abs() {
+        if dx > 0.0 { "→" } else { "←" }
+    } else if dy > 0.0 {
+        "↓"
+    } else {
+        "↑"
+    };
+    let arrow_w = font::text_width(arrow, config::ENEMY_HUD_TEXT_SCALE);
+    font::draw_text(fb, x - arrow_w / 2, y - 7, arrow, config::ENEMY_HUD_TEXT_SCALE, config::THREAT_COLOR);
+}
+
 fn line_text(line: &input::ManualLine) -> String {
     let keys: Vec<&str> = line.actions.iter().map(|&a| input::label_for(a)).collect();
     let pending = line.actions.iter().any(|&a| !input::is_implemented(a));
@@ -177,6 +241,17 @@ mod tests {
     fn draw_controls_manual_does_not_panic_on_small_framebuffer() {
         let mut fb = Framebuffer::new(64, 64);
         draw_controls_manual(&mut fb);
+    }
+
+    #[test]
+    fn enemy_status_and_offscreen_arrow_do_not_panic() {
+        let mut fb = Framebuffer::new(320, 180);
+        draw_enemy_status(
+            &mut fb,
+            21,
+            30,
+            EnemyIndicator { x: 1.0, y: -0.3, visible: false },
+        );
     }
 
     #[test]

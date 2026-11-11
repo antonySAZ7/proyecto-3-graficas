@@ -156,6 +156,9 @@ pub const GALACTUS_DEFORM_FREQUENCY: f32 = 1.1;
 pub const GALACTUS_DEFORM_AMPLITUDE: f32 = 0.32;
 
 // --- Disparo de la nave (`Espacio`, Fase 7) ---
+/// Fase 9 completa detrás de una sola bandera. En `false` se conserva el
+/// rayo cian y el umbral de repliegue original de `bodies::GALACTUS`.
+pub const COMBATE_LEGIBLE: bool = true;
 pub const LASER_SPEED: f32 = 60.0;
 pub const LASER_LIFETIME: f32 = 2.2;
 pub const LASER_COOLDOWN: f32 = 0.14;
@@ -164,6 +167,25 @@ pub const LASER_LENGTH: f32 = 1.6;
 pub const LASER_SPAWN_OFFSET: f32 = 1.1;
 /// Margen sobre el radio de Galactus para contar un impacto.
 pub const LASER_HIT_RADIUS_MARGIN: f32 = 0.6;
+
+// --- Combate legible (Fase 9) ---
+/// Cantidad de impactos que representa la barra completa de Galactus.
+pub const GALACTUS_MAX_HEALTH: u32 = 30;
+pub const GALACTUS_DAMAGE_FLASH_DURATION: f32 = 0.24;
+pub const IMPACT_FLASH_DURATION: f32 = 0.38;
+pub const FIRE_TRAIL_SPARKS: usize = 5;
+pub const FIRE_TRAIL_SPACING: f32 = 0.34;
+pub const FIRE_PROJECTILE_GLOW_RADIUS: f32 = 0.22;
+pub const FIRE_PROJECTILE_GLOW_SCALE: f32 = 4.0;
+pub const FIRE_COLOR: Vec3 = Vec3::new(1.0, 0.12, 0.015);
+pub const FIRE_CORE_COLOR: Vec3 = Vec3::new(1.0, 0.88, 0.28);
+pub const IMPACT_COLOR: Vec3 = Vec3::new(1.0, 0.18, 0.08);
+
+pub const ENEMY_HUD_BAR_WIDTH: i32 = 300;
+pub const ENEMY_HUD_BAR_HEIGHT: i32 = 12;
+pub const ENEMY_HUD_MARGIN_TOP: i32 = 10;
+pub const ENEMY_HUD_TEXT_SCALE: i32 = 2;
+pub const ENEMY_HUD_EDGE_MARGIN: f32 = 28.0;
 
 // --- HUD: telemetría y mensajes (Fase 7) ---
 pub const TELEMETRY_TEXT_SCALE: i32 = 2;

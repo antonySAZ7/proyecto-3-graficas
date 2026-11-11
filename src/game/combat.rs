@@ -10,7 +10,13 @@ use crate::game::world::World;
 pub struct Laser {
     pub position: Vec3,
     pub direction: Vec3,
-    age: f32,
+    pub age: f32,
+}
+
+/// Efecto breve que persiste después de retirar el proyectil que impactó.
+pub struct ImpactFx {
+    pub position: Vec3,
+    pub age: f32,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -25,13 +31,14 @@ pub enum CombatEvent {
 /// caliente, salvo al disparar (crece el `Vec` principal si hace falta).
 pub struct Combat {
     pub lasers: Vec<Laser>,
+    pub impacts: Vec<ImpactFx>,
     scratch: Vec<Laser>,
     cooldown: f32,
 }
 
 impl Combat {
     pub fn new() -> Self {
-        Self { lasers: Vec::new(), scratch: Vec::new(), cooldown: 0.0 }
+        Self { lasers: Vec::new(), impacts: Vec::new(), scratch: Vec::new(), cooldown: 0.0 }
     }
 
     /// Avanza los proyectiles existentes, dispara uno nuevo si corresponde y
@@ -39,6 +46,12 @@ impl Combat {
     /// que quien llama (el bucle principal) decida qué mensaje mostrar.
     pub fn update(&mut self, firing: bool, ship: &Ship, world: &mut World, dt: f32) -> Vec<CombatEvent> {
         let mut events = Vec::new();
+        if config::COMBATE_LEGIBLE {
+            for impact in &mut self.impacts {
+                impact.age += dt;
+            }
+            self.impacts.retain(|impact| impact.age < config::IMPACT_FLASH_DURATION);
+        }
         self.cooldown = (self.cooldown - dt).max(0.0);
         if firing && self.cooldown <= 0.0 {
             self.cooldown = config::LASER_COOLDOWN;
@@ -56,6 +69,9 @@ impl Combat {
             laser.position = laser.position + laser.direction * (config::LASER_SPEED * dt);
             laser.age += dt;
             if laser.position.distance(world.galactus_position) < hit_radius {
+                if config::COMBATE_LEGIBLE {
+                    self.impacts.push(ImpactFx { position: laser.position, age: 0.0 });
+                }
                 events.push(CombatEvent::Hit);
                 if world.register_galactus_hit() {
                     events.push(CombatEvent::Retreated);
@@ -110,6 +126,7 @@ mod tests {
         }
         assert!(hit, "el rayo apuntado directo a Galactus debe impactar");
         assert_eq!(world.galactus_hits, before_hits + 1);
+        assert_eq!(combat.impacts.len(), 1);
     }
 
     #[test]

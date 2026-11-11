@@ -18,7 +18,7 @@ use game::bodies::{self, ShaderKind};
 use game::camera::ChaseCamera;
 use game::combat::{Combat, CombatEvent};
 use game::config;
-use game::hud::{self, Messages, Telemetry};
+use game::hud::{self, EnemyIndicator, Messages, Telemetry};
 use game::input;
 use game::ship::Ship;
 use game::skybox::Skybox;
@@ -124,6 +124,104 @@ fn draw_glow(
     }
 }
 
+/// Partícula barata en pantalla, proyectada desde el mundo y con prueba de
+/// profundidad. No agrega triángulos ni asignaciones al frame.
+fn draw_world_spark(fb: &mut Framebuffer, view_proj: Mat4, position: Vec3, radius: f32, color: Vec3, alpha: f32) {
+    let Some((cx, cy, depth)) = project_to_screen(view_proj, fb.width as f32, fb.height as f32, position) else { return };
+    let radius = radius.max(1.0);
+    let min_x = (cx - radius).floor().max(0.0) as i32;
+    let max_x = (cx + radius).ceil().min(fb.width as f32 - 1.0) as i32;
+    let min_y = (cy - radius).floor().max(0.0) as i32;
+    let max_y = (cy + radius).ceil().min(fb.height as f32 - 1.0) as i32;
+    for y in min_y..=max_y {
+        for x in min_x..=max_x {
+            let dx = x as f32 + 0.5 - cx;
+            let dy = y as f32 + 0.5 - cy;
+            let distance = (dx * dx + dy * dy).sqrt() / radius;
+            if distance >= 1.0 || fb.depth_at(x as usize, y as usize) < depth - 0.012 {
+                continue;
+            }
+            let fade = (1.0 - distance).powf(1.6) * alpha;
+            fb.blend_pixel(x as usize, y as usize, depth - 0.013, Vec4::new(color.x, color.y, color.z, fade.clamp(0.0, 1.0)));
+        }
+    }
+}
+
+/// Brillo, parpadeo y estela de los proyectiles, más flash/chispas de cada
+/// impacto. Todo se dibuja después de la geometría para mantenerlo legible.
+fn draw_combat_fx(
+    fb: &mut Framebuffer,
+    view_proj: Mat4,
+    combat: &Combat,
+    time: f32,
+    cam_right: Vec3,
+    cam_up: Vec3,
+) {
+    for laser in &combat.lasers {
+        let flicker = 0.72 + 0.28 * (time * 29.0 + laser.age * 41.0).sin().abs();
+        draw_glow(
+            fb,
+            view_proj,
+            laser.position,
+            cam_right,
+            config::FIRE_PROJECTILE_GLOW_RADIUS,
+            config::FIRE_COLOR,
+            flicker,
+            config::FIRE_PROJECTILE_GLOW_SCALE,
+        );
+        for i in 0..config::FIRE_TRAIL_SPARKS {
+            let step = (i + 1) as f32;
+            let wobble = (time * 37.0 + laser.age * 23.0 + step * 2.17).sin();
+            let position = laser.position
+                - laser.direction * (config::FIRE_TRAIL_SPACING * step)
+                + cam_right * (wobble * 0.045 * step);
+            let color = config::FIRE_COLOR.lerp(config::FIRE_CORE_COLOR, 1.0 - i as f32 / config::FIRE_TRAIL_SPARKS as f32);
+            draw_world_spark(fb, view_proj, position, 2.4 - i as f32 * 0.22, color, flicker * (1.0 - i as f32 * 0.13));
+        }
+    }
+
+    for impact in &combat.impacts {
+        let progress = (impact.age / config::IMPACT_FLASH_DURATION).clamp(0.0, 1.0);
+        let fade = 1.0 - progress;
+        let flash_color = config::IMPACT_COLOR.lerp(Vec3::new(1.0, 1.0, 1.0), fade * 0.75);
+        draw_world_spark(fb, view_proj, impact.position, 14.0 * fade + 2.0, flash_color, fade);
+        let spread = 0.35 + progress * 2.2;
+        for i in 0..8 {
+            let angle = i as f32 * std::f32::consts::TAU / 8.0 + time * 0.8;
+            let position = impact.position + cam_right * (angle.cos() * spread) + cam_up * (angle.sin() * spread);
+            draw_world_spark(fb, view_proj, position, 2.2, config::FIRE_CORE_COLOR, fade * 0.9);
+        }
+    }
+}
+
+fn enemy_indicator(camera: &ChaseCamera, view_proj: Mat4, target: Vec3, width: f32, height: f32) -> EnemyIndicator {
+    let forward = (camera.look_at - camera.position).normalize();
+    let right = forward.cross(camera.up).normalize();
+    let to_target = target - camera.position;
+    let front = to_target.dot(forward);
+    if let Some((x, y, z)) = project_to_screen(view_proj, width, height, target)
+        && front > 0.0
+        && (-1.0..=1.0).contains(&z)
+        && x >= 0.0
+        && x < width
+        && y >= 0.0
+        && y < height
+    {
+        return EnemyIndicator { x: 0.0, y: 0.0, visible: true };
+    }
+
+    let mut x = to_target.dot(right);
+    let mut y = -to_target.dot(camera.up);
+    if front <= 0.0 {
+        x = -x;
+        y = -y;
+        if x.abs() + y.abs() < 1e-4 {
+            y = 1.0;
+        }
+    }
+    EnemyIndicator { x, y, visible: false }
+}
+
 /// Shader de superficie según el tipo de dato de `bodies.rs`; construido una
 /// sola vez al inicio (las tablas de ruido no se recrean por frame).
 fn build_planet_shader(def: &bodies::BodyDef) -> Box<dyn FragmentShader> {
@@ -204,7 +302,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Rayo de la nave (Fase 7): malla reutilizada entre todos los disparos,
     // solo cambia la matriz de modelo por proyectil.
     let laser_mesh = mesh::cylinder(6, config::LASER_RADIUS, config::LASER_LENGTH);
-    let laser_shader = LaserShader::new(config::LASER_RADIUS);
+    let laser_shader = LaserShader::new(config::LASER_RADIUS, config::COMBATE_LEGIBLE);
     let mut combat = Combat::new();
     let mut messages = Messages::new();
     let mut last_collision_notified: Option<&'static str> = None;
@@ -271,7 +369,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             for event in combat.update(input_state.fire, &ship, &mut world, dt) {
                 match event {
                     CombatEvent::Fired => {}
-                    CombatEvent::Hit => messages.push("IMPACTO EN GALACTUS", config::HERO_COLOR),
+                    CombatEvent::Hit => messages.push(
+                        "IMPACTO EN GALACTUS",
+                        if config::COMBATE_LEGIBLE { config::FIRE_CORE_COLOR.extend(1.0) } else { config::HERO_COLOR },
+                    ),
                     CombatEvent::Retreated => messages.push("GALACTUS SE REPLIEGA", config::THREAT_COLOR),
                 }
             }
@@ -298,6 +399,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let skybox_view_proj = proj * camera.view_rotation_only();
         let eye = camera.position;
         let uniforms = Uniforms { time: elapsed, light_dir };
+        galactus_shader.set_damage_flash(if config::COMBATE_LEGIBLE {
+            world.galactus_damage_flash / config::GALACTUS_DAMAGE_FLASH_DURATION
+        } else {
+            0.0
+        });
         let frustum = Frustum::from_view_proj(view_proj);
 
         let mut objects_visible = 0u32;
@@ -407,9 +513,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             config::EARTH_GLOW_INTENSITY,
             config::EARTH_GLOW_SCREEN_SCALE,
         );
+        if config::COMBATE_LEGIBLE {
+            draw_combat_fx(&mut fb, view_proj, &combat, elapsed, cam_right, camera.up);
+        }
 
         if show_hud {
             hud::draw_controls_manual(&mut fb);
+
+            hud::draw_enemy_status(
+                &mut fb,
+                world.galactus_health(),
+                world.galactus_max_health(),
+                enemy_indicator(
+                    &camera,
+                    view_proj,
+                    world.galactus_position,
+                    config::WIDTH as f32,
+                    config::HEIGHT as f32,
+                ),
+            );
 
             let nearest = world.nearest_body(ship.position);
             let target_dir = ship.direction_to_target(&world);

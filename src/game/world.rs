@@ -37,6 +37,8 @@ pub struct World {
     pub galactus_rotation: f32,
     /// Impactos de la nave acumulados desde el último repliegue.
     pub galactus_hits: u32,
+    /// Tiempo restante del parpadeo visual al recibir daño (Fase 9).
+    pub galactus_damage_flash: f32,
     /// Contador para elegir el siguiente punto de reaparición (ver `respawn_galactus`).
     galactus_spawn_index: u32,
 }
@@ -64,6 +66,7 @@ impl World {
             galactus_position: Vec3::ZERO,
             galactus_rotation: 0.0,
             galactus_hits: 0,
+            galactus_damage_flash: 0.0,
             galactus_spawn_index: 0,
         };
         world.update(0.0);
@@ -98,6 +101,7 @@ impl World {
     /// impactos del jugador, no solo del reloj.
     pub fn update_galactus(&mut self, dt: f32) {
         self.galactus_rotation += bodies::GALACTUS.rotation_speed * dt;
+        self.galactus_damage_flash = (self.galactus_damage_flash - dt).max(0.0);
 
         let earth = self.planets[bodies::EARTH_INDEX].position;
         let to_earth = earth - self.galactus_position;
@@ -112,12 +116,23 @@ impl World {
     /// (y reaparece lejos otra vez, reiniciando el contador de impactos).
     pub fn register_galactus_hit(&mut self) -> bool {
         self.galactus_hits += 1;
-        if self.galactus_hits >= bodies::GALACTUS.hits_to_retreat {
+        if config::COMBATE_LEGIBLE {
+            self.galactus_damage_flash = config::GALACTUS_DAMAGE_FLASH_DURATION;
+        }
+        if self.galactus_hits >= self.galactus_max_health() {
             self.respawn_galactus();
             true
         } else {
             false
         }
+    }
+
+    pub fn galactus_max_health(&self) -> u32 {
+        if config::COMBATE_LEGIBLE { config::GALACTUS_MAX_HEALTH } else { bodies::GALACTUS.hits_to_retreat }
+    }
+
+    pub fn galactus_health(&self) -> u32 {
+        self.galactus_max_health().saturating_sub(self.galactus_hits)
     }
 
     /// Nuevo punto de aparición lejos de la Tierra. La dirección usa el
@@ -239,12 +254,23 @@ mod tests {
         let mut world = World::new();
         let first_spawn = world.galactus_position;
         let mut retreated = false;
-        for _ in 0..bodies::GALACTUS.hits_to_retreat {
+        for _ in 0..world.galactus_max_health() {
             retreated = world.register_galactus_hit();
         }
         assert!(retreated);
         assert_eq!(world.galactus_hits, 0);
         assert_ne!(world.galactus_position, first_spawn);
+    }
+
+    #[test]
+    fn phase_nine_health_and_damage_flash_are_configurable() {
+        let mut world = World::new();
+        assert_eq!(world.galactus_health(), config::GALACTUS_MAX_HEALTH);
+        assert!(!world.register_galactus_hit());
+        assert_eq!(world.galactus_health(), config::GALACTUS_MAX_HEALTH - 1);
+        assert!(world.galactus_damage_flash > 0.0);
+        world.update_galactus(config::GALACTUS_DAMAGE_FLASH_DURATION + 0.01);
+        assert_eq!(world.galactus_damage_flash, 0.0);
     }
 
     #[test]

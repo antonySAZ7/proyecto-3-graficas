@@ -1,3 +1,5 @@
+use std::sync::atomic::{AtomicU32, Ordering};
+
 use crate::engine::math::{Vec3, Vec4};
 use crate::engine::noise::Fbm;
 use crate::shaders::{spherical_uv, FragInput, FragmentShader, Uniforms};
@@ -10,13 +12,18 @@ use crate::shaders::{spherical_uv, FragInput, FragmentShader, Uniforms};
 pub struct GalactusShader {
     hide: Fbm,
     crack: Fbm,
+    damage_flash_bits: AtomicU32,
 }
 
 impl GalactusShader {
     pub fn new(seed: u32) -> Self {
         let hide = Fbm::new(seed).set_octaves(4).set_frequency(2.2).set_persistence(0.5);
         let crack = Fbm::new(seed.wrapping_add(211)).set_octaves(3).set_frequency(6.0).set_persistence(0.55);
-        Self { hide, crack }
+        Self { hide, crack, damage_flash_bits: AtomicU32::new(0.0f32.to_bits()) }
+    }
+
+    pub fn set_damage_flash(&self, amount: f32) {
+        self.damage_flash_bits.store(amount.clamp(0.0, 1.0).to_bits(), Ordering::Relaxed);
     }
 }
 
@@ -46,7 +53,16 @@ impl FragmentShader for GalactusShader {
 
         // Capa 5: reborde violeta (fresnel), silueta amenazante contra el espacio.
         let fres = (1.0 - input.normal.dot(input.view_dir).clamp(0.0, 1.0)).powf(2.2);
-        let final_color = lit + Vec3::new(0.65, 0.1, 0.85) * fres * 0.7;
+        let mut final_color = lit + Vec3::new(0.65, 0.1, 0.85) * fres * 0.7;
+
+        // Fase 9: el pulso alterna rojo/blanco para que cada impacto sea
+        // legible incluso si el destello central queda detrás de la silueta.
+        let damage_flash = f32::from_bits(self.damage_flash_bits.load(Ordering::Relaxed));
+        if damage_flash > 0.0 {
+            let blink = 0.5 + 0.5 * (t * 55.0).sin();
+            let damage_color = Vec3::new(1.0, 0.12, 0.06).lerp(Vec3::new(1.0, 1.0, 1.0), blink);
+            final_color = final_color.lerp(damage_color, damage_flash * 0.82);
+        }
 
         Vec4::new(final_color.x, final_color.y, final_color.z, 1.0)
     }

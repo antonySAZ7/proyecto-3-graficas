@@ -1,109 +1,57 @@
 # Plan por fases
 
-Una fase por sesión de Claude Code. Al terminar: `cargo test`, `cargo run --release`, commit local, actualizar la casilla correspondiente y `/clear`. Detalles de reglas y arquitectura en `CLAUDE.md`.
+Una fase por sesión de Claude Code. Al terminar: `cargo test`, `cargo run --release`, commit local, marcar las casillas y `/clear`. Reglas y arquitectura en `CLAUDE.md` (sin push, sin coautoría).
 
-Referencia JS: `reference/js/{math,obj,meshes,renderer,shaders,game}.js`. Úsalo como guía de comportamiento, no como molde: donde pueda quedar mejor, mejóralo.
+Referencia JS: `reference/js/`. Imagen de referencia de Galactus: `reference/galactus.png`.
 
-## Fase 0: Preparación
-- [x] Clonar el repo del lab a un repo nuevo; renombrar el crate; conservar la historia útil.
-- [x] Copiar el JS a `reference/js/`, `fantasticar.obj` a `assets/models/`, rúbrica y PDF a `reference/`.
-- [x] Reorganizar en `engine/`, `shaders/`, `game/` según `CLAUDE.md`; el lab debe seguir compilando y mostrando sus 3 cuerpos.
-- [x] Perfil release en `Cargo.toml`, `config.rs` inicial, README mínimo.
+## Fases 0 a 8: completadas
+Preparación, núcleo del motor, nave y cámara, sistema solar, rendimiento (culling, LOD, rayon), superficie y geometría, shaders, estética y combate, entrega. Evidencia de rúbrica en `RUBRICA.md`. No tocar su lógica salvo lo que pidan las fases de abajo.
 
-**Listo cuando:** `cargo run --release` muestra lo mismo que el lab, con la nueva estructura.
+## Reglas de las fases 9 a 12
+- El proyecto aún no se entrega. No se usan ramas: cada fase termina en **un commit local**, y si algo se complica se vuelve al commit de la fase anterior con `git reset --hard <hash>`.
+- Antes de empezar, anota el hash del commit actual (`git log -1 --oneline`).
+- Cada fase debe poder quitarse sin romper las demás: lo nuevo va detrás de una constante en `game/config.rs` (por ejemplo `GALACTUS_DETALLADO`) y el comportamiento anterior sigue disponible.
+- No bajar de 60 FPS a la resolución objetivo. Si una fase baja el rendimiento, se simplifica antes de continuar.
+- No cambiar el motor (`engine/`) salvo que sea imprescindible (por ejemplo, mezcla aditiva para fuego); si se cambia, decirlo en el commit.
+- Nada fuera de lo listado. Sin audio, guardado, IA de drones, misiones múltiples ni armas extra.
 
-## Fase 1: Núcleo del motor
-- [x] `math.rs`: Vec3, Mat4 (modelo, vista, proyección), orientación con cuaternión o base ortonormal (sin gimbal lock), alinear Y a una normal.
-- [x] `noise.rs`: valor/Perlin/fbm con tabla de permutación y semilla.
-- [x] `obj.rs`: lector OBJ con triangulación de caras y normales calculadas si faltan.
-- [x] Bucle con delta time acotado.
-- [x] Pruebas de math, OBJ y ruido determinista.
+## Fase 9: Combate legible (tareas simples, juntas)
+- [x] **Ataque de fuego:** el disparo pasa del rayo azul actual a un proyectil rojo/naranja con núcleo amarillo claro, brillo y parpadeo animado con el tiempo; estela corta de chispas.
+- [x] **Destello de impacto** al golpear a Galactus: flash rojo/blanco breve y chispas.
+- [x] **Salud de Galactus:** valor configurable en `config.rs` (por defecto unos 30 impactos), baja con cada golpe.
+- [x] **Enemigo visible en el HUD:** nombre "GALACTUS" con barra de vida arriba al centro, y una flecha en el borde de la pantalla que apunta hacia él cuando está fuera de vista.
+- [x] **Reacción al daño:** Galactus parpadea o se tiñe de blanco/rojo un instante al recibir un impacto.
 
-**Listo cuando:** la nave OBJ se dibuja con z-buffer y un shader propio.
+**Listo cuando:** se entiende de un vistazo quién es el enemigo, dónde está y que el ataque le hace daño.
 
-## Fase 2: Nave, cámara y vuelo (facilidad de juego)
-- [x] Cámara perseguidora 3D con suavizado; cabeceo, guiñada y alabeo.
-- [x] Aceleración, frenado y giro progresivos con respuesta suave e independiente del equipo.
-- [x] Mejoras sobre el JS: estabilización asistida, indicador de dirección al objetivo, velocidad crucero, límite de velocidad según cercanía a planetas.
-- [x] Skybox de estrellas orientado con la cámara (sin traslación).
+## Fase 10: Galactus elaborado (tarea compleja, aislada)
+Objetivo: que vuelva a verse como el villano. Referencia: `reference/galactus.png` y las partes de Galactus en `reference/js/game.js` y `meshes.js`.
+- [ ] Modelo compuesto por partes con una transformación padre: casco/cabeza ovalada con **dos espirales altas** a los lados (como cuernos), **cara rosada** con **dos ojos cian** brillantes, **hombros esféricos** a ambos lados, **torso en forma de bloque** y base.
+- [ ] Shader púrpura con **bandas/rayas animadas** (mismo lenguaje visual de la referencia) y brillo magenta en los hombros; la cara con shader aparte, suave y rosado.
+- [ ] Escala colosal frente a los planetas; rotación lenta y un pulso de energía en los ojos.
+- [ ] Culling con una sola esfera englobante para todo el conjunto, y LOD (versión simple a distancia) para no pasar el presupuesto de triángulos.
+- [ ] Respetar la barra de vida y el parpadeo de la Fase 9 sobre todas las partes.
+- [ ] `GALACTUS_DETALLADO` en `config.rs`: en `false` vuelve a la esfera actual.
 
-**Listo cuando:** se vuela cómodo en el vacío, sin marearse.
+**Listo cuando:** Galactus se reconoce a distancia, mantiene los FPS y se puede desactivar con una constante.
 
-## Fase 3: Sistema solar
-- [x] `bodies.rs` como datos: radio, órbita, velocidad, inclinación, rotación, shader, luna opcional.
-- [x] Sol + 5 planetas (Tierra, Mundo Forja, Niflheim, Planeta Fragmentado, Mundo de Plata) + Luna, órbitas y rotación por tiempo.
-- [x] Gravedad por inversa del cuadrado, colisión esférica, modo `O` para rodear un planeta.
-- [x] Acercamiento continuo sin cortes.
+## Fase 11: Pantallas y objetivo del juego (tarea compleja, aislada)
+Problema actual: al abrir el juego no se sabe de qué trata ni qué hacer.
+- [ ] **Estados de juego** (`Menu`, `Jugando`, `Pausa`, `Victoria`, `Derrota`) en `game/state.rs`; el bucle principal decide qué dibujar y actualizar según el estado.
+- [ ] **Menú principal:** fondo con el skybox y la Tierra girando (reutiliza la escena existente), título "FANTASTICAR: DEFENSA DE LA TIERRA", historia en 2 o 3 líneas ("Galactus se acerca a la Tierra. Los Cuatro Fantásticos son su última defensa."), controles principales y "ENTER para jugar".
+- [ ] **Objetivo guiado en el HUD**, en pasos: "1. Vuela hacia Galactus" → "2. ¡Dispara hasta destruirlo!" con la distancia y la barra de su vida.
+- [ ] **Amenaza simple:** Galactus avanza despacio hacia la Tierra; si llega, la barra de "Salud de la Tierra" baja con el tiempo. Velocidades y valores en `config.rs`.
+- [ ] **Victoria** al llegar su salud a 0 y **derrota** si la Tierra llega a 0 o la nave choca; pantalla con texto claro y `ENTER` para reiniciar, `Esc` para salir.
+- [ ] `P` pausa y vuelve; `R` reinicia partida desde cualquier estado de juego.
 
-**Listo cuando:** se puede ir de lejos a la superficie y rodear un planeta sin saltos ni atravesarlo.
+**Listo cuando:** una persona que nunca vio el juego entiende la historia y qué hacer, puede ganar y perder, y reinicia sin cerrar el programa.
 
-## Fase 4: Rendimiento
-- [x] Rasterización paralela por bandas con `rayon`; buffers reutilizados.
-- [x] Frustum culling por esfera (`F2` compara encendido/apagado).
-- [x] LOD de 3 niveles por distancia (`F3` compara con máximo detalle).
-- [x] HUD con FPS, triángulos procesados y objetos descartados.
+## Fase 12: Cierre y entrega
+- [ ] Actualizar `README.md`: nuevos controles, menú, objetivo, cómo ganar, capturas nuevas.
+- [ ] Actualizar `RUBRICA.md` y `GUION_VIDEO.md` con el flujo nuevo (menú → vuelo → acercamiento → combate → victoria).
+- [ ] Revisar rendimiento y contadores (`F2`/`F3`) para confirmar que siguen funcionando.
+- [ ] `cargo test`, `cargo clippy` y build limpio desde cero.
+- [ ] Declarar el uso de IA y los integrantes y contribuciones reales.
 
-**Listo cuando:** 60 FPS estables a la resolución objetivo y los contadores cambian de verdad con `F2`/`F3`.
-
-## Fase 5: Superficie y geometría
-- [x] 4 modelos propios sobre la Tierra (árbol cristalino, roca, torre, baliza).
-- [x] Distribución procedural con semilla fija configurable, sobre toda la esfera, con prueba de reproducibilidad.
-- [x] Posición y orientación correctas sobre la superficie mientras el planeta rota.
-- [x] Deformación de geometría por ruido multioctava (Planeta Fragmentado).
-- [x] Generación/subdivisión procedural de mallas antes de rasterizar.
-
-**Listo cuando:** la superficie se ve poblada y coherente desde cerca y sin parpadeos.
-
-## Fase 6: Shaders
-- [x] Mínimo 4 shaders visual e internamente distintos (Tierra, lava, hielo, metal) más sol, roca y nave. Galactus queda para la Fase 7 (ahí se agrega como entidad).
-- [x] Al menos uno animado con el tiempo (plasma solar, nubes de la Tierra, lava, circuitos del Mundo de Plata).
-- [x] Mapeo de normales procedural en la Tierra, calculado en el renderer por software (gradiente del ruido de terreno por diferencias finitas).
-- [x] Reutilizar lo ya hecho en el lab (estrella, rocoso, luna) donde encaje; `gas_giant.rs` se retiró porque ningún cuerpo quedó con esa identidad visual.
-
-**Listo cuando:** cada cuerpo se identifica de un vistazo.
-
-## Fase 7: Estética y combate
-- [x] Dirección artística: azul/cian/blanco (héroes) contra púrpura/magenta (amenaza); Tierra como foco.
-- [x] Efectos baratos: brillo del sol, atmósfera fresnel, estelas del warp (`H`).
-- [x] Galactus como amenaza colosal con shader propio; rayo de la nave (`Espacio`).
-- [x] HUD claro con fuente bitmap propia: telemetría, objetivo, controles, mensajes. `F1` oculta el HUD.
-
-**Listo cuando:** una captura de pantalla cualquiera se ve intencional y legible.
-
-## Fase 8: Entrega
-- [x] README: ejecución, controles, integrantes, tabla rúbrica → dónde verlo, créditos.
-- [x] `RUBRICA.md` actualizado con evidencia real de cada punto.
-- [x] `GUION_VIDEO.md`: vuelo, acercamiento, vuelta alrededor de un planeta y alejamiento.
-- [x] Screenshots y revisión final: `cargo test`, `cargo clippy`, build limpio desde cero.
-
-## Fase 9 (después de entregar): escalar a juego
-Ideas, sin hacerlas antes de la entrega:
-- Sistema de misiones y progresión; enemigos con IA simple; más modos de arma.
-- Guardado de partida; menú principal y pausa.
-- Audio (crate `rodio`), gamepad.
-- Galaxia generada por semilla con más sistemas.
-- Cargar cuerpos y escenas desde archivos de datos (RON/TOML).
-
-## Checklist de rúbrica (200 pts, nota máx 100)
-
-| Área | Característica | Pts | Fase |
-|---|---|---:|---|
-| Planetas | 5 planetas distinguibles | 50 | 3 |
-| Superficie | 4 tipos de modelo | 20 | 5 |
-| Superficie | Distribución procedural reproducible | 10 | 5 |
-| Superficie | Orientación sobre superficie curva rotando | 5 | 5 |
-| Render | 4 shaders distintos | 24 | 6 |
-| Render | Shader animado | 8 | 6 |
-| Render | Mapeo de normales | 8 | 6 |
-| Render | Deformación de geometría | 10 | 5 |
-| Render | Generación/subdivisión procedural | 10 | 5 |
-| Navegación | Modo local para rodear planeta | 8 | 3 |
-| Navegación | Aceleración y giro progresivos | 8 | 2 |
-| Navegación | Gravedad | 10 | 3 |
-| Navegación | Colisión | 4 | 3 |
-| Rendimiento | Descarte de objetos fuera de vista | 7 | 4 |
-| Rendimiento | LOD por distancia | 8 | 4 |
-| Presentación | Coherencia visual | 5 | 7 |
-| Presentación | Claridad y controles | 5 | 7 |
-
-Extras de las capturas de Canvas: warping, nave que sigue la cámara, skybox con estrellas, no atravesar elementos, cámara con movimiento 3D, órbitas.
+## Futuro (no hacer ahora)
+Más armas, drones enemigos con IA simple, misiones encadenadas, guardado de partida, audio, gamepad, galaxia generada por semilla y escenas desde archivos de datos.
