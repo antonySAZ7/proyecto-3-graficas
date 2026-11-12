@@ -68,7 +68,7 @@ orbitan y rotan por tiempo transcurrido, no por frames):
 | Mundo de Plata | metal con circuitos animados | `shaders/metal.rs` |
 | Luna | orbita la Tierra, cráteres | `shaders/moon.rs` |
 | Sol | plasma turbulento animado, manchas, resplandor | `shaders/star.rs` |
-| Galactus | amenaza colosal, malla deformada, persigue a la Tierra | `shaders/galactus.rs` |
+| Galactus | casco púrpura, rostro rosado, ojos cian, cuernos altos, torso y hombros; persigue a la Tierra | `shaders/galactus.rs` |
 
 Sobre la Tierra hay 4 tipos de modelo propio (árbol cristalino, roca, torre,
 baliza) distribuidos proceduralmente con semilla fija

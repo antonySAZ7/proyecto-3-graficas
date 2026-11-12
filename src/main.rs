@@ -25,7 +25,7 @@ use game::skybox::Skybox;
 use game::surface;
 use game::world::World;
 use shaders::earth::EarthShader;
-use shaders::galactus::GalactusShader;
+use shaders::galactus::{GalactusEyeShader, GalactusFaceShader, GalactusShader};
 use shaders::ice::IceShader;
 use shaders::laser::LaserShader;
 use shaders::lava::LavaShader;
@@ -53,6 +53,109 @@ fn build_fractured_lod(seed: u32, octaves: u32, frequency: f32, amplitude: f32) 
         build(config::FRACTURED_ICOSPHERE_SUBDIV_MEDIUM),
         build(config::FRACTURED_ICOSPHERE_SUBDIV_LOW),
     )
+}
+
+#[derive(Clone, Copy)]
+enum GalactusPartMesh {
+    Sphere,
+    Eye,
+    Cuboid,
+    Cylinder,
+    Cone,
+}
+
+#[derive(Clone, Copy)]
+enum GalactusPartMaterial {
+    Armor,
+    Face,
+    Eye,
+}
+
+#[derive(Clone, Copy)]
+struct GalactusPart {
+    mesh: GalactusPartMesh,
+    material: GalactusPartMaterial,
+    position: Vec3,
+    scale: Vec3,
+    rotation_z: f32,
+}
+
+const GALACTUS_PARTS: [GalactusPart; 17] = [
+    GalactusPart { mesh: GalactusPartMesh::Sphere, material: GalactusPartMaterial::Armor, position: Vec3::new(0.0, 0.28, -0.08), scale: Vec3::new(0.43, 0.50, 0.34), rotation_z: 0.0 },
+    GalactusPart { mesh: GalactusPartMesh::Sphere, material: GalactusPartMaterial::Face, position: Vec3::new(0.0, 0.24, 0.20), scale: Vec3::new(0.31, 0.37, 0.24), rotation_z: 0.0 },
+    GalactusPart { mesh: GalactusPartMesh::Eye, material: GalactusPartMaterial::Eye, position: Vec3::new(-0.13, 0.29, 0.46), scale: Vec3::new(0.06, 0.035, 0.035), rotation_z: 0.0 },
+    GalactusPart { mesh: GalactusPartMesh::Eye, material: GalactusPartMaterial::Eye, position: Vec3::new(0.13, 0.29, 0.46), scale: Vec3::new(0.06, 0.035, 0.035), rotation_z: 0.0 },
+    GalactusPart { mesh: GalactusPartMesh::Cuboid, material: GalactusPartMaterial::Armor, position: Vec3::new(0.0, 0.49, 0.34), scale: Vec3::new(0.34, 0.055, 0.07), rotation_z: 0.0 },
+    GalactusPart { mesh: GalactusPartMesh::Cuboid, material: GalactusPartMaterial::Armor, position: Vec3::new(-0.34, 0.30, 0.10), scale: Vec3::new(0.09, 0.33, 0.27), rotation_z: 0.0 },
+    GalactusPart { mesh: GalactusPartMesh::Cuboid, material: GalactusPartMaterial::Armor, position: Vec3::new(0.34, 0.30, 0.10), scale: Vec3::new(0.09, 0.33, 0.27), rotation_z: 0.0 },
+    GalactusPart { mesh: GalactusPartMesh::Cylinder, material: GalactusPartMaterial::Armor, position: Vec3::new(-0.43, 0.75, -0.02), scale: Vec3::new(0.075, 0.62, 0.075), rotation_z: -0.08 },
+    GalactusPart { mesh: GalactusPartMesh::Cylinder, material: GalactusPartMaterial::Armor, position: Vec3::new(0.43, 0.75, -0.02), scale: Vec3::new(0.075, 0.62, 0.075), rotation_z: 0.08 },
+    GalactusPart { mesh: GalactusPartMesh::Cone, material: GalactusPartMaterial::Armor, position: Vec3::new(-0.48, 1.10, -0.02), scale: Vec3::new(0.11, 0.30, 0.11), rotation_z: -0.14 },
+    GalactusPart { mesh: GalactusPartMesh::Cone, material: GalactusPartMaterial::Armor, position: Vec3::new(0.48, 1.10, -0.02), scale: Vec3::new(0.11, 0.30, 0.11), rotation_z: 0.14 },
+    GalactusPart { mesh: GalactusPartMesh::Cylinder, material: GalactusPartMaterial::Armor, position: Vec3::new(0.0, -0.11, -0.02), scale: Vec3::new(0.18, 0.22, 0.18), rotation_z: 0.0 },
+    GalactusPart { mesh: GalactusPartMesh::Cuboid, material: GalactusPartMaterial::Armor, position: Vec3::new(0.0, -0.44, -0.02), scale: Vec3::new(0.58, 0.38, 0.34), rotation_z: 0.0 },
+    GalactusPart { mesh: GalactusPartMesh::Cuboid, material: GalactusPartMaterial::Armor, position: Vec3::new(0.0, -0.35, 0.34), scale: Vec3::new(0.34, 0.13, 0.07), rotation_z: 0.0 },
+    GalactusPart { mesh: GalactusPartMesh::Sphere, material: GalactusPartMaterial::Armor, position: Vec3::new(-0.67, -0.30, -0.02), scale: Vec3::new(0.27, 0.27, 0.27), rotation_z: 0.0 },
+    GalactusPart { mesh: GalactusPartMesh::Sphere, material: GalactusPartMaterial::Armor, position: Vec3::new(0.67, -0.30, -0.02), scale: Vec3::new(0.27, 0.27, 0.27), rotation_z: 0.0 },
+    GalactusPart { mesh: GalactusPartMesh::Cuboid, material: GalactusPartMaterial::Armor, position: Vec3::new(0.0, -0.82, -0.02), scale: Vec3::new(0.42, 0.12, 0.28), rotation_z: 0.0 },
+];
+
+struct GalactusGeometry {
+    spheres: LodSet<Mesh>,
+    eye: Mesh,
+    cuboid: Mesh,
+    cylinder: Mesh,
+    cone: Mesh,
+}
+
+impl GalactusGeometry {
+    fn new() -> Self {
+        Self {
+            spheres: LodSet::new(mesh::sphere(20, 28), mesh::sphere(12, 16), mesh::sphere(8, 10)),
+            eye: mesh::sphere(8, 12),
+            cuboid: mesh::cuboid(Vec3::splat(1.0)),
+            cylinder: mesh::cylinder(12, 1.0, 1.0),
+            cone: mesh::cone(12, 1.0, 1.0),
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn push_detailed_galactus<'a>(
+    queue: &mut RenderQueue<'a>,
+    geometry: &'a GalactusGeometry,
+    level: LodLevel,
+    parent: Mat4,
+    view_proj: Mat4,
+    eye: Vec3,
+    armor: &'a dyn FragmentShader,
+    face: &'a dyn FragmentShader,
+    eyes: &'a dyn FragmentShader,
+) {
+    for part in GALACTUS_PARTS {
+        let mesh = match part.mesh {
+            GalactusPartMesh::Sphere => geometry.spheres.get(level),
+            GalactusPartMesh::Eye => &geometry.eye,
+            GalactusPartMesh::Cuboid => &geometry.cuboid,
+            GalactusPartMesh::Cylinder => &geometry.cylinder,
+            GalactusPartMesh::Cone => &geometry.cone,
+        };
+        let shader = match part.material {
+            GalactusPartMaterial::Armor => armor,
+            GalactusPartMaterial::Face => face,
+            GalactusPartMaterial::Eye => eyes,
+        };
+        let rotation = if part.rotation_z.abs() > 1e-5 {
+            Quat::from_axis_angle(Vec3::Z, part.rotation_z).to_mat4()
+        } else {
+            Mat4::IDENTITY
+        };
+        let model = parent
+            * Mat4::from_translation(part.position)
+            * rotation
+            * Mat4::from_scale(part.scale);
+        queue.push_mesh(mesh, model, view_proj, eye, shader, (config::WIDTH, config::HEIGHT));
+    }
 }
 
 /// Proyecta un punto del mundo a espacio de pantalla; `None` si queda detrás
@@ -298,6 +401,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         config::GALACTUS_DEFORM_AMPLITUDE,
     );
     let galactus_shader = GalactusShader::new(bodies::GALACTUS.seed);
+    let galactus_face_shader = GalactusFaceShader::new(galactus_shader.damage_flash());
+    let galactus_eye_shader = GalactusEyeShader::new(galactus_shader.damage_flash());
+    let galactus_geometry = GalactusGeometry::new();
 
     // Rayo de la nave (Fase 7): malla reutilizada entre todos los disparos,
     // solo cambia la matriz de modelo por proyectil.
@@ -450,11 +556,37 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             render_queue.push_mesh(sphere_lod.get(level), moon_model, view_proj, eye, &moon_shader, (config::WIDTH, config::HEIGHT));
         }
 
-        if let Some(level) = visible_lod(world.galactus_position, bodies::GALACTUS.radius) {
-            let galactus_model = Mat4::from_translation(world.galactus_position)
+        let galactus_bound = if config::GALACTUS_DETALLADO {
+            bodies::GALACTUS.radius * config::GALACTUS_DETAILED_BOUND_SCALE
+        } else {
+            bodies::GALACTUS.radius
+        };
+        if let Some(level) = visible_lod(world.galactus_position, galactus_bound) {
+            let galactus_parent = Mat4::from_translation(world.galactus_position)
                 * Quat::from_axis_angle(Vec3::Y, world.galactus_rotation).to_mat4()
                 * Mat4::from_scale(Vec3::splat(bodies::GALACTUS.radius));
-            render_queue.push_mesh(galactus_lod.get(level), galactus_model, view_proj, eye, &galactus_shader, (config::WIDTH, config::HEIGHT));
+            if config::GALACTUS_DETALLADO && level != LodLevel::Low {
+                push_detailed_galactus(
+                    &mut render_queue,
+                    &galactus_geometry,
+                    level,
+                    galactus_parent,
+                    view_proj,
+                    eye,
+                    &galactus_shader,
+                    &galactus_face_shader,
+                    &galactus_eye_shader,
+                );
+            } else {
+                render_queue.push_mesh(
+                    galactus_lod.get(level),
+                    galactus_parent,
+                    view_proj,
+                    eye,
+                    &galactus_shader,
+                    (config::WIDTH, config::HEIGHT),
+                );
+            }
         }
 
         // Objetos de superficie de la Tierra (Fase 5): solo de cerca, cada

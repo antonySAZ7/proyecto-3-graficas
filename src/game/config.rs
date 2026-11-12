@@ -149,6 +149,11 @@ pub const WARP_STREAK_LENGTH_SCALE: f32 = 55.0;
 pub const WARP_STREAK_COLOR: Vec3 = Vec3::new(0.65, 0.9, 1.0);
 
 // --- Galactus: amenaza colosal (Fase 7) ---
+/// Modelo compuesto inspirado en el diseño clásico: casco, rostro, ojos,
+/// cuernos, torso y hombros. En `false` vuelve a la esfera deformada.
+pub const GALACTUS_DETALLADO: bool = true;
+/// El modelo compuesto sobresale del radio físico por los cuernos.
+pub const GALACTUS_DETAILED_BOUND_SCALE: f32 = 1.35;
 pub const GALACTUS_DEFORM_OCTAVES: u32 = 4;
 pub const GALACTUS_DEFORM_FREQUENCY: f32 = 1.1;
 /// Fracción del radio desplazada por el ruido: más extrema que la del

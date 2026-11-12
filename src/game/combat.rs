@@ -63,7 +63,12 @@ impl Combat {
             events.push(CombatEvent::Fired);
         }
 
-        let hit_radius = bodies::GALACTUS.radius + config::LASER_HIT_RADIUS_MARGIN;
+        let visual_radius = if config::GALACTUS_DETALLADO {
+            bodies::GALACTUS.radius * config::GALACTUS_DETAILED_BOUND_SCALE
+        } else {
+            bodies::GALACTUS.radius
+        };
+        let hit_radius = visual_radius + config::LASER_HIT_RADIUS_MARGIN;
         self.scratch.clear();
         for mut laser in self.lasers.drain(..) {
             laser.position = laser.position + laser.direction * (config::LASER_SPEED * dt);
